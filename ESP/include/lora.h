@@ -24,7 +24,7 @@
 
 #pragma pack(push, 1)
 
-struct TelemetryFastPacket
+struct telemetryFastPacket
 {
     uint8_t packetID; // 0x02
     double lat;
@@ -34,13 +34,30 @@ struct TelemetryFastPacket
     uint8_t targetIdx; 
 };
 
-struct TelemetrySlowPacket
+struct telemetrySlowPacket
 {
     uint8_t packetID; // 0x03
     uint8_t batt;
     uint8_t gps;
     bool commTimeout;
     uint32_t errorCode;
+};
+
+struct routePacket
+{
+    uint8_t packetID; // 0x01
+    uint8_t id;
+    double lat;
+    double lon;
+    uint8_t order;
+    uint8_t ammnt;
+};
+
+struct routeAckPacket
+{
+    uint8_t packetID; // 0x10
+    uint8_t id;
+    uint8_t order;
 };
 
 #pragma pack(pop)

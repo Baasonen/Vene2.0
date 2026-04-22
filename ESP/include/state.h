@@ -33,6 +33,7 @@ typedef struct
 
     Route route;
     wp home;
+    bool homeSet;
     uint8_t targetIdx;
 
     SystemStatus status;

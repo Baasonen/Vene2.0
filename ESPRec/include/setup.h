@@ -14,3 +14,5 @@
 #define LORA_SF 9
 #define LORA_CODING_RATE 7
 #define LORA_POWER 15
+
+#define ROUTE_PACKET_SIZE 20

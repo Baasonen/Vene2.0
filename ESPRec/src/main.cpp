@@ -18,6 +18,7 @@ void setup()
     if (state == RADIOLIB_ERR_NONE)
     {
         Serial.println("SYSTEM_READY");
+        radio.startReceive();
     }
     else
     {
@@ -29,13 +30,26 @@ void setup()
 
 void loop()
 {
-    uint8_t rxBuffer[256];
-    int rxState = radio.receive(rxBuffer, 0);
-
-    if (rxState == RADIOLIB_ERR_NONE)
+    if (digitalRead(LORA_DIO0))
     {
-        int len = radio.getPacketLength();
+        uint8_t rxBuffer[256];
+        int rxState = radio.readData(rxBuffer, sizeof(rxBuffer));
 
-        Serial.write(rxBuffer, len);
+        if (rxState == RADIOLIB_ERR_NONE)
+        {
+            int len = radio.getPacketLength();
+            Serial.write(rxBuffer, len);
+        }
+        radio.startReceive();
+    }
+
+    if (Serial.available() >= ROUTE_PACKET_SIZE)
+    {
+        uint8_t txBuffer[ROUTE_PACKET_SIZE];
+        Serial.readBytes(txBuffer, ROUTE_PACKET_SIZE);
+
+        radio.transmit(txBuffer, ROUTE_PACKET_SIZE);
+
+        radio.startReceive();
     }
 }

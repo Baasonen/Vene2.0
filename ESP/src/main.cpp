@@ -30,6 +30,7 @@ void setup()
         0
     );
 
+
 }
 
 void loop()
@@ -37,10 +38,61 @@ void loop()
     MagData mag = getMagnetometer();
     GPSData gps = getGPS();
 
+    uint8_t mode;
+    uint8_t targetIdx;
+    double homeLat, homeLon;
+    static Route currentRoute = {};
+
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+    {
+        mode = globalState.status.mode;
+        targetIdx = globalState.targetIdx;
+        homeLat = globalState.home.lat;
+        homeLon = globalState.home.lon;
+
+        if (globalState.route.newRouteAvailable)
+        {
+            currentRoute = globalState.route;
+            globalState.route.newRouteAvailable = false;
+        }
+
+        xSemaphoreGive(stateMutex);
+    }
+
+    switch (mode)
+    {
+        case 0:
+            // STOP
+            break;
+
+        case 1:
+            // MANUAL
+            if (globalState.status.commTimeout) {mode = 0;}
+
+            break;
+
+        case 2:
+            // AUTOPILOT
+            if (globalState.status.commTimeout) {mode = 0;}
+
+            break;
+
+        case 3: 
+            // RETURN HOME (AUTOPILOT TO HOME WP)
+            break;
+
+        default:
+            mode = 0;
+            break;
+    }
+
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
     {
         globalState.gps = gps;
         globalState.mag = mag;
+
+        globalState.status.mode = mode;
+        globalState.targetIdx = targetIdx;
 
         xSemaphoreGive(stateMutex);
     }
