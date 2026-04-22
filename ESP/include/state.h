@@ -10,9 +10,10 @@ struct wp
 
 typedef struct 
 {
-    wp waypoints[50];
+    wp waypoints[51];
     uint8_t id;
     uint8_t length;
+    bool routeReady;
     bool newRouteAvailable;
 } Route;
 
@@ -21,10 +22,18 @@ typedef struct
     uint8_t mode;
     uint8_t battery;
     bool gpsFix;
-    bool commTimeout;
+    bool loraTimeout;
+    bool wifiTimeout;
+    uint32_t commTimeoutTriggerTime;
 
     uint32_t errorCode;
 } SystemStatus;
+
+typedef struct 
+{
+    int8_t throttle;
+    int8_t rudder;
+} ManualControls;
 
 typedef struct 
 {
@@ -37,6 +46,7 @@ typedef struct
     uint8_t targetIdx;
 
     SystemStatus status;
+    ManualControls manual;
 } State;
 
 extern State globalState;

@@ -70,17 +70,22 @@ void commsTask(void* pvParameters)
 
                         if (!wpReceived[rp->order])
                         {
-                            tempRoute.waypoints[rp->order].lat = rp->lat;
-                            tempRoute.waypoints[rp->order].lon = rp->lon;
-                            wpReceived[rp->order] = true;
+                            tempRoute.waypoints[rp->order + 1].lat = rp->lat;
+                            tempRoute.waypoints[rp->order + 1].lon = rp->lon;
+                            wpReceived[rp->order + 1] = true;
                             receivedCount++;
 
                             if (receivedCount == tempRoute.length)
-                            {
+                            {   
                                 tempRoute.newRouteAvailable = true;
+                                tempRoute.routeReady = true;
 
                                 if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
                                 {
+                                    globalState.status.loraTimeout = false;
+
+                                    tempRoute.waypoints[0].lat = globalState.home.lat;
+                                    tempRoute.waypoints[0].lon = globalState.home.lon;
                                     globalState.route = tempRoute;
                                     xSemaphoreGive(stateMutex);
 
@@ -90,6 +95,20 @@ void commsTask(void* pvParameters)
                                 receivedCount = 0;
                             }
                         }
+                    }
+                }
+            
+                if (packetID == PKT_CONTROL && radio.getPacketLength() == sizeof(controlPacket))
+                {
+                    lastPacketReceivedTime = millis();
+
+                    controlPacket* cp = (controlPacket*)rxBuffer;
+
+                    if (xSemaphoreTake(stateMutex, pdTICKS_TO_MS(5)) == pdTRUE)
+                    {
+                        globalState.status.mode = cp->mode;
+                        globalState.status.loraTimeout = false;
+                        xSemaphoreGive(stateMutex);
                     }
                 }
             }
@@ -132,7 +151,7 @@ void commsTask(void* pvParameters)
                 {
                     slowPkt.batt = globalState.status.battery;
                     slowPkt.gps = (uint8_t)globalState.gps.hdop * 10;
-                    slowPkt.commTimeout = globalState.status.commTimeout;
+                    slowPkt.commTimeout = globalState.status.loraTimeout;
                     slowPkt.errorCode = globalState.status.errorCode;
 
                     xSemaphoreGive(stateMutex);
@@ -143,6 +162,17 @@ void commsTask(void* pvParameters)
                 radio.startReceive();
             }
         }
+    
+    if (millis() - lastPacketReceivedTime > 10000) 
+    {
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)) == pdTRUE)
+        {
+            globalState.status.commTimeoutTriggerTime = millis();
+            globalState.status.loraTimeout = true;
+            xSemaphoreGive(stateMutex);
+        }
+    }
+
     vTaskDelay(pdMS_TO_TICKS(10));
     }
 }

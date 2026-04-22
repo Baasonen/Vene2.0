@@ -20,6 +20,7 @@
 #define PKT_WP_DATA 0x01
 #define PKT_TELE_FAST 0x02
 #define PKT_TELE_SLOW 0x03
+#define PKT_CONTROL 0x04
 #define PKT_ACK 0x10
 
 #pragma pack(push, 1)
@@ -39,6 +40,7 @@ struct telemetrySlowPacket
     uint8_t packetID; // 0x03
     uint8_t batt;
     uint8_t gps;
+    uint8_t signalStenght;
     bool commTimeout;
     uint32_t errorCode;
 };
@@ -58,6 +60,12 @@ struct routeAckPacket
     uint8_t packetID; // 0x10
     uint8_t id;
     uint8_t order;
+};
+
+struct controlPacket
+{
+    uint8_t packetID;
+    uint8_t mode;
 };
 
 #pragma pack(pop)
