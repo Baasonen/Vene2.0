@@ -1,0 +1,13 @@
+# Offline map tiles
+*.db
+
+# Pycache
+*.pyc
+
+# Platformio 
+*.pio
+*.vscode
+*.env
+*.bin
+*.elf
+*.map
