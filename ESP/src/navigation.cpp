@@ -8,7 +8,7 @@ float distanceToPoint(double lat1, double lon1, double lat2, double lon2)
     float latMean = (lat1 + lat2) * 0.5 * degToRad;
 
     // Maapallo on (kai) pyöreä, huomioi pituusasteiden välinen etäisyys
-    dLon * cos(latMean);
+    dLon *= cos(latMean);
 
     float res = sqrt(dLon * dLon + dLat * dLat);
 
@@ -18,7 +18,7 @@ float distanceToPoint(double lat1, double lon1, double lat2, double lon2)
 float headingToPoint(double lat1, double lon1, double lat2, double lon2)
 {
     float dLat = (lat2 - lat1) * degToRad;
-    float dLon = (lat2 - lat1) * degToRad;
+    float dLon = (lon2 - lon1) * degToRad;
 
     float latMean = (lat1 + lat2) * 0.5 * degToRad;
 

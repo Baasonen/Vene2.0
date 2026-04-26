@@ -6,12 +6,19 @@ static HardwareSerial gpsSerial(2);
 int GPSInit()
 {
     gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN);
-    return 1;
+
+    uint32_t start = millis(); // Wait 2s and check if communication
+    while (millis() - start < 20000)
+    {
+        if (gpsSerial.available() > 10) {return 1;}
+    }
+
+    return 0;
 }
 
 GPSData getGPS()
 {
-    static uint32_t lastValid;
+    static uint32_t lastValid = millis();
 
     static GPSData data = {};
 
@@ -24,7 +31,7 @@ GPSData getGPS()
             data.lat = gps.location.lat();
             data.lon = gps.location.lng();
             data.speedKMH = gps.speed.kmph();
-            data.hdop=gps.hdop.hdop();
+            data.hdop = gps.hdop.hdop();
             data.satellites = gps.satellites.value();
             data.time = gps.time.value();
 

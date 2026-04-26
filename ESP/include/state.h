@@ -3,6 +3,9 @@
 #include "gps.h"
 #include "magnetometer.h"
 
+#define GPS_MAX_HDOP 1.5
+#define MAG_MIN_ACC 2
+
 struct wp
 {
     double lat, lon;
@@ -13,7 +16,6 @@ typedef struct
     wp waypoints[51];
     uint8_t id;
     uint8_t length;
-    bool routeReady;
     bool newRouteAvailable;
 } Route;
 
@@ -21,12 +23,18 @@ typedef struct
 {
     uint8_t mode;
     uint8_t battery;
-    bool gpsFix;
     bool loraTimeout;
     bool wifiTimeout;
     uint32_t commTimeoutTriggerTime;
 
+    wp home;
+    bool homeSet;
+
+    bool routeReady;
+    uint8_t targetIdx;
+
     uint32_t errorCode;
+    bool initFail;
 } SystemStatus;
 
 typedef struct 
@@ -41,12 +49,11 @@ typedef struct
     MagData mag;
 
     Route route;
-    wp home;
-    bool homeSet;
-    uint8_t targetIdx;
 
     SystemStatus status;
     ManualControls manual;
 } State;
 
 extern State globalState;
+
+uint8_t validateMode(const SystemStatus& status, const GPSData& gps, const MagData& mag);

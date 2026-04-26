@@ -1,17 +1,21 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
+#include "esp_system.h"
+#include "esp_task_wdt.h"
+
 #include "magnetometer.h"
 #include "gps.h"
 #include "lora.h"
 #include "state.h"
 #include "control.h"
 #include "wifiComm.h"
+#include "sensorsInit.h"
 
-State globalState = {};
+#define DEBUG true
+
+State globalState = {0};
 SemaphoreHandle_t stateMutex;
-
-static Servo rudder;
 
 void setup();
 void loop();
@@ -19,55 +23,56 @@ void loop();
 void setup()
 {
     Serial.begin(115200);
+    Serial.println("BOOT...");
 
-    rudder.attach(4);
-    rudder.write(90);
+    stateMutex = xSemaphoreCreateMutex();
 
-    if (!magInit()) {Serial.println("Magnetometer init fail");}
-    if (!GPSInit()) {Serial.println("GPS init failed");}
+    bool initFail = false;
+
+    initFail = sensorsInit();
+
+    if (DEBUG)
+    {
+        globalState.status.homeSet = true;
+    }
 
     controlInit();
     WiFiInit();
 
-    stateMutex = xSemaphoreCreateMutex();
+    xTaskCreatePinnedToCore(commsTask, "CommsTask", 8192, NULL, 1, NULL, 0);
 
-    xTaskCreatePinnedToCore(
-        commsTask,
-        "CommsTask",
-        4096,
-        NULL,
-        1,
-        NULL,
-        0
-    );
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)) == pdTRUE)
+    {
+        globalState.status.initFail = initFail;
 
+        xSemaphoreGive(stateMutex);
+    }
 
+    esp_task_wdt_init(5, true);
+    esp_task_wdt_add(NULL);
 }
 
 void loop()
 {
+    static uint32_t lastLoopStartTime = 0;
+    uint32_t loopDuration = millis() - lastLoopStartTime;
+    lastLoopStartTime = millis();
+
+    esp_task_wdt_reset();
+
     MagData mag = getMagnetometer();
     GPSData gps = getGPS();
 
     WiFiReadIncoming(stateMutex);
 
-    uint8_t mode;
-    uint8_t targetIdx;
-    double homeLat, homeLon;
-
     static Route currentRoute = {};
     static SystemStatus localSysStatus = {};
     static ManualControls manual = {};
 
-    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(30)) == pdTRUE)
     {
         localSysStatus = globalState.status;
         manual = globalState.manual;
-
-        mode = globalState.status.mode;
-        targetIdx = globalState.targetIdx;
-        homeLat = globalState.home.lat;
-        homeLon = globalState.home.lon;
 
         if (globalState.route.newRouteAvailable)
         {
@@ -78,31 +83,28 @@ void loop()
         xSemaphoreGive(stateMutex);
     }
 
+    uint8_t mode = localSysStatus.mode;
+    mode = validateMode(localSysStatus, gps, mag);
+
     switch (mode)
     {
         case 0:
             // STOP
 
-            turnRudder(90);
+            turnRudder(0);
             setThrottle(0);
 
             break;
 
         case 1:
             // MANUAL
-
-            if (localSysStatus.wifiTimeout) {mode = 0;}
-            else
-            {
-                turnRudder(manual.rudder);
-                setThrottle(manual.throttle);
-            }
+            turnRudder(manual.rudder);
+            setThrottle(manual.throttle);
 
             break;
 
         case 2:
             // AUTOPILOT
-            if (localSysStatus.loraTimeout && (millis() - localSysStatus.commTimeoutTriggerTime) < 30000) {mode = 0;}
 
             break;
 
@@ -115,20 +117,41 @@ void loop()
             break;
     }
 
-    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(15)) == pdTRUE)
     {
         globalState.gps = gps;
         globalState.mag = mag;
 
         globalState.status.mode = mode;
-        globalState.targetIdx = targetIdx;
-
-        globalState.status.mode = mode;
+        globalState.status.targetIdx = localSysStatus.targetIdx;
 
         xSemaphoreGive(stateMutex);
     }
 
-    //Serial.printf("Heading: %.2f Accuracy: %.2i ", mag.heading, mag.accuracy);
-    //Serial.printf("Lat: %.2f Lon: %.2f hdop: %.2f satellites: %i\n", gps.lat, gps.lon, gps.hdop, gps.satellites);
-    delay(100);
+    static uint32_t lastStatusPrintTime = millis();
+    if (millis() - lastStatusPrintTime > 2000)
+    {
+        Serial.println("\n--- VENE 2.0 SYSTEM STATUS ---");
+        
+        Serial.printf("Mode: %u | Loop Time: %u ms\n", mode, loopDuration);
+        
+        Serial.printf("Controls: Throttle: %d | Rudder: %d\n", manual.throttle, manual.rudder);
+        
+        Serial.printf("GPS: [%s] Lat: %.6f, Lon: %.6f | Sats: %d | HDOP: %.2f\n", 
+                      gps.valid ? "VALID" : "INVALID", 
+                      gps.lat, gps.lon, gps.satellites, gps.hdop);
+        
+        Serial.printf("MAG: [%s] Heading: %.2f | Accuracy: %u (0-3)\n", 
+                      mag.valid ? "VALID" : "INVALID", 
+                      mag.heading, mag.accuracy);
+        
+        Serial.printf("Comms: LoRa TO: %s | WiFi TO: %s\n", 
+                      localSysStatus.loraTimeout ? "YES" : "NO", 
+                      localSysStatus.wifiTimeout ? "YES" : "NO");
+                      
+        Serial.println("-------------------------------");
+        lastStatusPrintTime = millis();
+    }
+
+    delay(10);
 }

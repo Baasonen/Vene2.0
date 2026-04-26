@@ -1,10 +1,20 @@
 #include "magnetometer.h"
 
-Adafruit_BNO08x bno085;
+Adafruit_BNO08x bno085(-1);
 sh2_SensorValue_t sensorValue;
+
+static bool magInitialized = false;
 
 int magInit()
 {
+    bno085.hardwareReset();
+    delay(1000); // Give time for proper bootup before I2C
+
+    Wire.end();
+    delay(100);
+    Wire.begin();
+    delay(200);
+
     if (!bno085.begin_I2C())
     {
         Serial.println("BNO085 not found");
@@ -17,13 +27,27 @@ int magInit()
         return 0;
     }
 
+    magInitialized = true;
     return 1;
 }
 
 MagData getMagnetometer() 
 {   
-    static uint32_t lastValidTime;
+    static uint32_t lastValidTime = millis();
     static MagData lastValid = {};
+
+    if (!magInitialized)
+    {
+        lastValid.valid = false;
+
+        if ((millis() - lastValidTime) > 15000)
+        {
+            Serial.println("[MAG] Attempting re-init...");
+            if (magInit()) {lastValidTime = millis();}
+            else {lastValidTime = millis();}
+        }
+        return lastValid;
+    }
 
     if (bno085.getSensorEvent(&sensorValue)) {
         if (sensorValue.sensorId == SH2_ARVR_STABILIZED_ROTATION_VECTOR) {
@@ -52,8 +76,13 @@ MagData getMagnetometer()
             lastValidTime = millis();
         }
     }
-    
-    if ((millis() - lastValidTime) > 200) {lastValid.valid = false;}
+
+    if ((millis() - lastValidTime) > 4000)
+    {
+        Serial.println("[MAG] Stale data, attempting to re-init...");
+        lastValid.valid = false;
+        magInitialized = false;
+    }
 
     return lastValid;
 }
