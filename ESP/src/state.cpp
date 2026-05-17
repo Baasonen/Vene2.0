@@ -4,7 +4,7 @@ uint8_t validateMode(const SystemStatus& status, const GPSData& gps, const MagDa
 {
     uint8_t mode = status.mode;
 
-    if (status.initFail || !status.homeSet) {return 0;}
+    if (!status.homeSet) {return 0;}
     if (status.loraTimeout && (millis() - status.commTimeoutTriggerTime > 30000)) {mode = 3;}
 
     //TODO: Check correct logic
