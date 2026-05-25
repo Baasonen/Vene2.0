@@ -129,9 +129,9 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
-            fastPkt.lat = globalState.gps.lat;
-            fastPkt.lon = globalState.gps.lon;
-            fastPkt.heading = globalState.mag.heading;
+            fastPkt.lat = globalState.sensors.gps.lat;
+            fastPkt.lon = globalState.sensors.gps.lon;
+            fastPkt.heading = globalState.sensors.mag.heading;
             fastPkt.targetIdx = globalState.status.targetIdx;
             fastPkt.mode = globalState.status.mode;
             
@@ -151,7 +151,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
         {
             slowPkt.batt = globalState.status.battery;
-            slowPkt.gps = (uint8_t)(globalState.gps.hdop * 10);
+            slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
             slowPkt.errorCode = globalState.status.errorCode;
 
             xSemaphoreGive(stateMutex);

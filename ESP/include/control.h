@@ -8,7 +8,7 @@
 #define RUDDER_U_LIM 80
 #define RUDDER_L_LIM -80
 
-#define ESC_RANGE 5
+#define ESC_RANGE 1
 #define ESC_NEUTRAL 1500
 
 void controlInit();

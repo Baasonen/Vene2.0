@@ -7,8 +7,8 @@ int GPSInit()
 {
     gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN);
 
-    uint32_t start = millis(); // Wait 2s and check if communication
-    while (millis() - start < 20000)
+    uint32_t start = millis(); // Wait 3s and check if communication
+    while (millis() - start < 3000)
     {
         if (gpsSerial.available() > 10) {return 1;}
     }

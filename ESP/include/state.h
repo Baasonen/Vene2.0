@@ -12,7 +12,7 @@ struct wp
 };
 
 typedef struct 
-{
+{   
     wp waypoints[51];
     uint8_t id;
     uint8_t length;
@@ -23,6 +23,7 @@ typedef struct
 {
     uint8_t mode;
     uint8_t battery;
+
     bool loraTimeout;
     bool wifiTimeout;
     uint32_t commTimeoutTriggerTime;
@@ -34,7 +35,6 @@ typedef struct
     uint8_t targetIdx;
 
     uint32_t errorCode;
-    bool initFail;
 } SystemStatus;
 
 typedef struct 
@@ -47,13 +47,18 @@ typedef struct
 {
     GPSData gps;
     MagData mag;
+} SensorData;
 
+typedef struct 
+{
+    SensorData sensors;
     Route route;
-
     SystemStatus status;
     ManualControls manual;
 } State;
 
 extern State globalState;
+extern SemaphoreHandle_t stateMutex;
+extern QueueHandle_t sensorQueue;
 
-uint8_t validateMode(const SystemStatus& status, const GPSData& gps, const MagData& mag);
+uint8_t validateMode(const SystemStatus& status, const SensorData& sensors);
