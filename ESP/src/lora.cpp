@@ -118,6 +118,22 @@ void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived
             }
         }
     }
+
+    else if ((packetID == PKT_DATA) && (radio.getPacketLength() == sizeof(resetErrorsPacket)))
+    {
+        lastPacketReceivedTime = millis();
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10) == pdTRUE))
+        {
+            globalState.status.errorCode = 0;
+            globalState.status.loraTimeout = false;
+            xSemaphoreGive(stateMutex);
+        }
+
+        dataPacket ack = {PKT_DATA, 254, PKT_RESER_ERRORS};
+        radio.transmit((uint8_t*)&ack, sizeof(ack));
+        radio.startReceive();
+    }
 }
 
 void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)

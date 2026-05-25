@@ -27,4 +27,7 @@
 #define PKT_DATA 0x10
 #define PKT_DATA_SIZE 3
 
+#define PKT_RESET_ERRORS 0x07
+#define RESET_ERRORS_SIZE 1
+
 #define PKT_WIFI_HEARTBEAT 0x06

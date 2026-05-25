@@ -1,25 +1,10 @@
-"""
-VCOM2.0
 
-Usage:
-    from boat_controller import BoatController
-
-    ctrl = BoatController(serial_port="COM4")
-    ctrl.set_mode(1)                          # non-blocking
-    ctrl.send_route([(lat1, lon1), ...])      # non-blocking
-    print(ctrl.boat_data)
-    ctrl.stop()
-
-Callbacks:
-    ctrl.on_telemetry   = lambda data: ...    # dict with latest boat_data
-    ctrl.on_mode_change = lambda mode: ...    # int, fires on confirmed change
-"""
 
 import serial
 import struct
 import time
 import threading
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Set
 
 FAST_FORMAT = "<BddfBB"
 FAST_SIZE = struct.calcsize(FAST_FORMAT)
@@ -33,7 +18,10 @@ ACK_FORMAT = "<BBB"
 ACK_SIZE = struct.calcsize(ACK_FORMAT)
 
 CONTROL_FORMAT = "<BB"
+
 MANUAL_FORMAT = "<Bbb"   
+
+RESET_ERRORS_FORMAT = "<B"
 
 WIFI_HEARTBEAT_FORMAT = "<BI"
 WIFI_HEARTBEAT_SIZE = struct.calcsize(WIFI_HEARTBEAT_FORMAT)
@@ -43,12 +31,13 @@ PKT_TELE_FAST = 0x02
 PKT_TELE_SLOW = 0x03
 PKT_CONTROL = 0x04
 PKT_MANUAL = 0x05
-PKT_DATA = 0x10   
 PKT_WIFI_HB = 0x06
+PKT_RESET_ERRORS = 0x07
+PKT_DATA = 0x10   
+
 
 MODE_NAMES: dict = {0: "STOP", 1: "MANUAL", 2: "AUTO", 3: "RTL"}
 
-# Settings
 _MODE_TIMEOUT_S = 1.2   # per-attempt LoRa round-trip budget 
 _MODE_RETRIES = 5
 _ROUTE_TIMEOUT_S = 2.0
@@ -58,18 +47,11 @@ _WIFI_STALE_S = 3.0
 
 
 class Controller:
-    """
-    Thread-safe controller for the Vene 2.0 autonomous boat.
-
-    All public methods are safe to call from any thread.
-    """
-
     def __init__(self, serial_port: str = "COM4", baud_rate: int = 115200):
         self.serial_port = serial_port
         self.baud_rate = baud_rate
         self.ser: Optional[serial.Serial] = None
 
-        # Live telemetry (read-only from caller) 
         self.boat_data: dict = {
             "lat": 0.0, "lon": 0.0, "heading": 0.0,
             "mode": 0,  "target_idx": 0,
@@ -83,10 +65,9 @@ class Controller:
 
         # Connection state
         self.receiver_connected: bool = False
-        self.last_lora_time: float = 0.0   # epoch of last LoRa frame
-        self.last_wifi_time: float = 0.0   # epoch of last WiFi heartbeat
+        self.last_lora_time: float = 0.0  
+        self.last_wifi_time: float = 0.0  
 
-        # Route upload progress (read-only from caller) 
         # upload_status: idle / uploading / done / failed
         self.upload_status: str = "idle"
         self.upload_current: int = 0
@@ -105,7 +86,6 @@ class Controller:
         self._mode_ack_val = -1
         self.running = True
 
-        # Start background threads
         for target in (
             self._connection_manager,
             self._serial_rx_thread,
@@ -113,8 +93,6 @@ class Controller:
             self._heartbeat_tx_thread,
         ):
             threading.Thread(target=target, daemon=True).start()
-
-    # Public API
 
     def stop(self) -> None:
         self.running = False
@@ -124,7 +102,7 @@ class Controller:
             except Exception:
                 pass
 
-    # Request a mode change (non-blocing), verified legal on boat
+    # Request a mode change (non-blocing)
     def set_mode(self, mode: int) -> None:
         if not self.receiver_connected:
             print("[MODE] Cannot change mode: receiver offline")
@@ -148,8 +126,13 @@ class Controller:
                 wps.append((round(lat, 6), round(lon, 6)))
         self.send_route(wps)
 
-    # Computed connection properties 
+    def reset_errors(self) -> None:
+        if not self.receiver_connected:
+            print("[ERR_RST] Cannot reset errors, receiver not connected")
+            return
+        threading.Thread(target=self._reset_errors_tast, daemon=True).start()
 
+    # Computed connection properties 
     @property
     def lora_online(self) -> bool:
         return (
@@ -170,7 +153,6 @@ class Controller:
     def _connection_manager(self) -> None:
         while self.running:
             if not self.receiver_connected:
-                # Wipe link-layer timestamps so indicators go dark immediately
                 self.last_lora_time = 0.0
                 self.last_wifi_time = 0.0
                 try:
@@ -270,6 +252,17 @@ class Controller:
         self.upload_status  = "done"
         print("[ROUTE] Upload complete")
 
+    def _reset_errors_task(self) -> None:
+        pkt = struct.pack(RESET_ERRORS_FORMAT, PKT_RESET_ERRORS)
+        try:
+            with self._serial_lock:
+                self.ser.write(pkt)
+            print("[ERR_RST] Reset packet sent")
+
+        except Exception as e:
+            print(f"[ERR_RST] TX eroor: {e}")
+            self.receiver_connected = False
+
     # Internal serial RX
     def _serial_rx_thread(self) -> None:
         while self.running:
@@ -309,7 +302,7 @@ class Controller:
                             pass
                     self.ser = None
 
-            time.sleep(0.005)  # approx. 5 ms polling, tight enough for 115200 baud
+            time.sleep(0.005) 
 
     def _handle_fast_tele(self, payload: bytes) -> None:
         u = struct.unpack(FAST_FORMAT, payload)
@@ -328,22 +321,28 @@ class Controller:
 
     def _handle_slow_tele(self, payload: bytes) -> None:
         u = struct.unpack(SLOW_FORMAT, payload)
+        new_error = u [4]
+        old_error = self.boat_data["error"]
+
         with self._data_lock:
             self.boat_data.update({
                 "battery": u[1],
                 "hdop":    u[2] / 10.0,
                 "signal":  u[3],
-                "error":   u[4],
+                "error":   new_error,
             })
         self.last_lora_time = time.time()
+
+        if new_error != old_error and self.on_error_change:
+            new_bits     = {b for b in range(32) if (new_error >> b & 1) and not (old_error >> b & 1)}
+            cleared_bits = {b for b in range(32) if (old_error >> b & 1) and not (new_error >> b & 1)}
+            self.on_error_change(new_bits, cleared_bits)
 
     def _handle_ack(self, payload: bytes) -> None:
         _, ack_id, ack_val = struct.unpack(ACK_FORMAT, payload)
 
-        # ack_id=254 is our own heartbeat echoed back by the receiver ESP:
-        # radio.transmit() triggers a TX-done DIO0 pulse -> receivedFlag=true ->
-        # readData() returns the packet we just sent -< Serial.write() sends it
-        # back to us.
+        # ack_id=254 is our own heartbeat echoed back by the receiver ESP
+        # (TX-done DIO0 pulse triggers receivedFlag → readData → Serial.write)
         if ack_id == 254:
             return
 
