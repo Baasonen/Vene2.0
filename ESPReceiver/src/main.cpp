@@ -25,7 +25,7 @@ void setup()
 {
     Serial.begin(115200);
 
-    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
+    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, -1);
     int state = radio.begin(LORA_FREQ, LORA_BANDWIDTH, LORA_SF, LORA_CODING_RATE, RADIOLIB_SX127X_SYNC_WORD, LORA_POWER);
 
     Serial.print("LoRa init: ");
@@ -127,6 +127,7 @@ void loop()
                     receivedFlag = false;
                     lastLoRaTx = millis();
                     radio.transmit(txBuffer, expected_len);
+                    receivedFlag = false;
                     radio.startReceive();
                 }
             }

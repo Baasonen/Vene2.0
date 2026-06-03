@@ -24,7 +24,7 @@
 #define PKT_TELE_FAST 0x02
 #define PKT_TELE_SLOW 0x03
 #define PKT_CONTROL 0x04
-#define PKT_RESER_ERRORS 0x07
+#define PKT_RESET_ERRORS 0x07
 #define PKT_DATA 0x10
 
 #pragma pack(push, 1)
