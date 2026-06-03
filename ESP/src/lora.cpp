@@ -1,18 +1,45 @@
 #include "lora.h"
 
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
-SemaphoreHandle_t packetSem;
+static int8_t lastRSSI = 0;
+
+enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
+static volatile LoRaDir loraDir = LORA_DIR_RX;
+
+SemaphoreHandle_t rxPacketSem;
+SemaphoreHandle_t txDoneSem;
 
 void IRAM_ATTR onLoraDIO0Rise()
 {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xSemaphoreGiveFromISR(packetSem, &xHigherPriorityTaskWoken);
-    if (xHigherPriorityTaskWoken) {portYIELD_FROM_ISR();}
+    BaseType_t woken = pdFALSE;
+
+    if (loraDir == LORA_DIR_RX)
+    {
+        xSemaphoreGiveFromISR(rxPacketSem, &woken);
+    }
+    else
+    {
+        xSemaphoreGiveFromISR(txDoneSem, &woken);
+    }
+
+    if (woken) {portYIELD_FROM_ISR();}
+}
+
+void beginTransmit(uint8_t* data, size_t len)
+{
+    loraDir = LORA_DIR_TX;
+    radio.startTransmit(data, len);
+}
+
+void completeTransmit()
+{
+    loraDir = LORA_DIR_RX;
+    radio.startReceive();
 }
 
 int LoRaInit()
 {
-    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
+    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, -1);
 
     int state = radio.begin(LORA_FREQ, LORA_BANDWIDTH, LORA_SF, LORA_CODING_RATE, RADIOLIB_SX127X_SYNC_WORD, LORA_POWER);
 
@@ -20,20 +47,23 @@ int LoRaInit()
 
     else
     {
-        Serial.print("Lora error");
+        Serial.print("[LORA] LoRa Init Error");
         Serial.println(state);
         return 0;
     }
 }
 
-void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived, uint8_t &receivedCount)
+void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
+            Route &tempRoute, bool* wpReceived, uint8_t &receivedCount)
 {
     int len = radio.getPacketLength();
     if (len == 0) {return;}
 
     uint8_t rxBuffer[256];
     int rxState = radio.readData(rxBuffer, sizeof(rxBuffer));
-    if ((rxState != RADIOLIB_ERR_NONE) || (radio.getPacketLength() == 0)) {return;}
+    if (rxState != RADIOLIB_ERR_NONE) {return;}
+
+    lastRSSI = (int8_t)constrain((int)radio.getRSSI(), INT8_MIN, INT8_MAX);
 
     uint8_t packetID = rxBuffer[0];
 
@@ -41,6 +71,7 @@ void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived
     if ((packetID == PKT_WP_DATA) && (len == sizeof(routePacket)))
     {
         lastPacketReceivedTime = millis();
+        lastRoutePacketTime = millis();
 
         routePacket* rp = (routePacket*)rxBuffer;
         Serial.printf("Received Route Packet %i\n", rp->order);
@@ -56,8 +87,7 @@ void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived
         if ((rp->id == tempRoute.id) && (rp->order < 50))
         {
             dataPacket ack = {PKT_DATA, rp->id, rp->order};
-            radio.transmit((uint8_t*)&ack, sizeof(ack));
-            radio.startReceive();
+            beginTransmit((uint8_t*)&ack, sizeof(ack));
 
             if (!wpReceived[rp->order])
             {
@@ -85,14 +115,15 @@ void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived
             }
         }
     }
-    else if ((packetID == PKT_CONTROL) && (radio.getPacketLength() == sizeof(controlPacket)))
+
+    else if ((packetID == PKT_CONTROL) && (len == sizeof(controlPacket)))
     {
         lastPacketReceivedTime = millis();
 
         controlPacket* cp = (controlPacket*)rxBuffer;
 
         dataPacket ack = {PKT_DATA, 255, cp->mode};
-        radio.transmit((uint8_t*)&ack, sizeof(ack));
+        beginTransmit((uint8_t*)&ack, sizeof(ack));
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
@@ -100,18 +131,16 @@ void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived
             globalState.status.loraTimeout = false;
             xSemaphoreGive(stateMutex);
         }
-
-        radio.startReceive();
     }
 
-    else if ((packetID == PKT_DATA) && (radio.getPacketLength() == sizeof(dataPacket)))
+    else if ((packetID == PKT_DATA) && (len == sizeof(dataPacket)))
     {
         dataPacket* hb = (dataPacket*)rxBuffer;
         if (hb->id == 254) 
         {
             lastPacketReceivedTime = millis();
 
-            if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)))
+            if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)) == pdTRUE)
             {
                 globalState.status.loraTimeout = false;
                 xSemaphoreGive(stateMutex);
@@ -119,20 +148,17 @@ void rxTask(uint32_t &lastPacketReceivedTime, Route &tempRoute, bool* wpReceived
         }
     }
 
-    else if ((packetID == PKT_DATA) && (radio.getPacketLength() == sizeof(resetErrorsPacket)))
+    else if ((packetID == PKT_RESET_ERRORS) && (len == sizeof(resetErrorsPacket)))
     {
-        lastPacketReceivedTime = millis();
-
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10) == pdTRUE))
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
             globalState.status.errorCode = 0;
             globalState.status.loraTimeout = false;
             xSemaphoreGive(stateMutex);
         }
 
-        dataPacket ack = {PKT_DATA, 254, PKT_RESER_ERRORS};
-        radio.transmit((uint8_t*)&ack, sizeof(ack));
-        radio.startReceive();
+        dataPacket ack = {PKT_DATA, 254, PKT_RESET_ERRORS};
+        beginTransmit((uint8_t*)&ack, sizeof(ack));
     }
 }
 
@@ -140,7 +166,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 {
     if (millis() - lastFastTele > 900)
     {
-        telemetryFastPacket fastPkt;
+        telemetryFastPacket fastPkt = {};
         fastPkt.packetID = PKT_TELE_FAST;
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
@@ -153,15 +179,16 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
             
             xSemaphoreGive(stateMutex);
 
-            radio.transmit((uint8_t*)&fastPkt, sizeof(fastPkt));
-            radio.startReceive();
+            beginTransmit((uint8_t*)&fastPkt, sizeof(fastPkt));
+            lastFastTele = millis();
+
+            return;
         }
-        lastFastTele = millis();
     }
 
     if (millis() - lastSlowTele > 3100)
     {   
-        telemetrySlowPacket slowPkt;
+        telemetrySlowPacket slowPkt = {};
         slowPkt.packetID = PKT_TELE_SLOW;
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
@@ -169,23 +196,43 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
             slowPkt.batt = globalState.status.battery;
             slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
             slowPkt.errorCode = globalState.status.errorCode;
+            slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
 
             xSemaphoreGive(stateMutex);
 
-            radio.transmit((uint8_t*)&slowPkt, sizeof(slowPkt));
-            radio.startReceive();
+            beginTransmit((uint8_t*)&slowPkt, sizeof(slowPkt));
+            lastSlowTele = millis();
         }
-        lastSlowTele = millis();
     }
 }
 
 void commsTask(void* pvParameters)
 {
-    packetSem = xSemaphoreCreateBinary();
+    rxPacketSem = xSemaphoreCreateBinary();
+    txDoneSem = xSemaphoreCreateBinary();
     esp_task_wdt_add(NULL);
 
-    if (!LoRaInit()) {Serial.println("LoraInit ERR");}
+    uint32_t lastRoutePacketTime = 0;
 
+    while (!LoRaInit())
+    {
+        Serial.println("[LORA] Init failed, retrying in 5s...");
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            globalState.status.loraTimeout = true;
+            xSemaphoreGive(stateMutex);
+        }
+
+        for (int i = 0; i < 50; i++)
+        {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            esp_task_wdt_reset();
+        }
+    }
+
+    
+    radio.startReceive();
     pinMode(LORA_DIO0, INPUT);
     attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
 
@@ -197,22 +244,37 @@ void commsTask(void* pvParameters)
     static bool wpReceived[50] = {false};
     static uint8_t receivedCount = 0;
 
-    radio.startReceive();
-
     for (;;)
     {
         esp_task_wdt_reset();
 
-        if (xSemaphoreTake(packetSem, pdMS_TO_TICKS(10)) == pdTRUE)
+        // Handle TX completion (hig priority)
+        if (xSemaphoreTake(txDoneSem, 0) == pdTRUE)
         {
-            rxTask(lastPacketReceivedTime, tempRoute, wpReceived, receivedCount);
-            radio.startReceive();
+            completeTransmit();
         }
 
-        bool isUploading = ((millis() - lastPacketReceivedTime) < 1500);
-        if (!isUploading)
+        // Handle RX (only when not transmitting)
+        if (loraDir == LORA_DIR_RX)
         {
-            if (uxSemaphoreGetCount(packetSem) == 0) {txTask(lastFastTele, lastSlowTele);}
+            if (xSemaphoreTake(rxPacketSem, pdMS_TO_TICKS(10)) == pdTRUE)
+            {
+                rxTask(lastPacketReceivedTime, lastRoutePacketTime,
+                        tempRoute, wpReceived, receivedCount);
+                
+                if (loraDir == LORA_DIR_RX) {radio.startReceive();}
+            }
+        }
+        else // Yield to TX
+        {
+            vTaskDelay(pdMS_TO_TICKS(5));
+        }
+
+        bool isUploading = ((millis() - lastRoutePacketTime) < 1500);
+
+        if (!isUploading && loraDir == LORA_DIR_RX && uxSemaphoreGetCount(rxPacketSem) == 0)
+        {
+            txTask(lastFastTele, lastSlowTele);
         }
 
         if ((millis() - lastPacketReceivedTime) > 10000)
@@ -228,5 +290,7 @@ void commsTask(void* pvParameters)
                 xSemaphoreGive(stateMutex);
             }
         }
+
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 }

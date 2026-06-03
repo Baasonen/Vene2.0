@@ -134,7 +134,7 @@ void diagTask(void* pd)
 
         xQueuePeek(sensorQueue, &sensors, 0);
 
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10) == pdTRUE))
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
             status = globalState.status;
             xSemaphoreGive(stateMutex);
