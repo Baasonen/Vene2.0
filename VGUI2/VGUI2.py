@@ -90,7 +90,7 @@ class BoatGUI:
         self.lbl_loc   = ttk.Label(f, text="Location : —")
         self.lbl_head  = ttk.Label(f, text="Heading  : —")
         self.lbl_nav   = ttk.Label(f, text="Target WP: —  |  Mode: —")
-        self.lbl_stats = ttk.Label(f, text="Batt: —%  |  HDOP: —  |  Err: —")
+        self.lbl_stats = ttk.Label(f, text="Batt: —%  |  HDOP: —  |  RSSI: — dBm  |  Err: —")
 
         for lbl in (self.lbl_loc, self.lbl_head, self.lbl_nav, self.lbl_stats):
             lbl.pack(anchor="w", pady=1)
@@ -237,10 +237,10 @@ class BoatGUI:
         self.lbl_stats.config(
             text=(
                 f"Batt: {d['battery']}%   |   HDOP: {d['hdop']:.1f}   |"
+                f"   RSSI: {d['signal']} dBm   |"
                 f"   Err: 0x{d['error']:04X}"
             )
         )
-
     def _update_status(self) -> None:
         rx = self.ctrl.receiver_connected
  
