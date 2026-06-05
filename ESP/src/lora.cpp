@@ -2,6 +2,7 @@
 
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
 static int8_t lastRSSI = 0;
+static uint32_t txStartTime = 0;
 
 enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
 static volatile LoRaDir loraDir = LORA_DIR_RX;
@@ -27,6 +28,7 @@ void IRAM_ATTR onLoraDIO0Rise()
 
 void beginTransmit(uint8_t* data, size_t len)
 {
+    txStartTime = millis();
     loraDir = LORA_DIR_TX;
     radio.startTransmit(data, len);
 }
@@ -202,6 +204,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 
             beginTransmit((uint8_t*)&slowPkt, sizeof(slowPkt));
             lastSlowTele = millis();
+            Serial.println("[LORA] Slow tele sent");
         }
     }
 }
@@ -252,6 +255,12 @@ void commsTask(void* pvParameters)
         if (xSemaphoreTake(txDoneSem, 0) == pdTRUE)
         {
             completeTransmit();
+        }
+        else if (loraDir == LORA_DIR_TX && txStartTime != 0 && (millis() - txStartTime) > 500)
+        {
+            Serial.println("[LORA] TX timeout, forcing RX");
+            completeTransmit();
+            txStartTime = 0;
         }
 
         // Handle RX (only when not transmitting)
