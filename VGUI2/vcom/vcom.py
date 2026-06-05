@@ -328,7 +328,7 @@ class Controller:
             self.boat_data.update({
                 "battery": u[1],
                 "hdop":    u[2] / 10.0,
-                "signal":  u[3],
+                "signal":  u[3] - 128,
                 "error":   new_error,
             })
         self.last_lora_time = time.time()
