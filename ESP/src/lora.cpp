@@ -76,7 +76,7 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
         lastRoutePacketTime = millis();
 
         routePacket* rp = (routePacket*)rxBuffer;
-        Serial.printf("Received Route Packet %i\n", rp->order);
+        Serial.printf("[LORA] Received Route Packet %i\n", rp->order);
 
         if (rp->order == 0)
         {
@@ -162,10 +162,88 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
         dataPacket ack = {PKT_DATA, 254, PKT_RESET_ERRORS};
         beginTransmit((uint8_t*)&ack, sizeof(ack));
     }
+
+    else if ((packetID == PKT_HOME_SET) && (len == sizeof(homeSetPacket)))
+    {
+        lastPacketReceivedTime = millis();
+        homeSetPacket* hp = (homeSetPacket*)rxBuffer;
+
+        if (hp->lat != 0.0 || hp->lon != 0.0)
+        {
+            if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+            {
+                globalState.status.home.lat = hp->lat;
+                globalState.status.home.lon = hp->lon;
+                globalState.status.homeSet = true;
+                globalState.status.homeNeedsSave = true;
+                globalState.status.loraTimeout = false;
+                xSemaphoreGive(stateMutex);
+            }
+            Serial.printf("[LORA] Home set: %.6f, %.6f\n", hp->lat, hp->lon);
+        }
+
+        dataPacket ack = {PKT_DATA, PKT_HOME_SET, 0x01};
+        beginTransmit((uint8_t*)&ack, sizeof(ack));
+    }
+
+    else if ((packetID == PKT_HOME_REQ) && (len == 1))
+    {
+        lastPacketReceivedTime = millis();
+
+        homeDataPacket resp = {};
+        resp.packetID = PKT_HOME_DATA;
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            resp.lat = globalState.status.homeSet ? globalState.status.home.lat : 0.0;
+            resp.lon = globalState.status.homeSet ? globalState.status.home.lon : 0.0;
+            globalState.status.loraTimeout = false;
+            xSemaphoreGive(stateMutex);
+        }
+
+        Serial.printf("[LORA] Home requested, responding: %.6f, %.6f\n", resp.lat, resp.lon);
+        beginTransmit((uint8_t*)&resp, sizeof(resp));
+    }
+
+    else if ((packetID == PKT_TIME_DATA) && (len == sizeof(timeDataPacket)))
+    {
+        lastPacketReceivedTime = millis();
+        timeDataPacket* tp = (timeDataPacket*)rxBuffer;
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            if (!globalState.status.timeSet)
+            {
+                globalState.status.unixTime = tp->unixTime;
+                globalState.status.timeSet = true;
+
+                Serial.printf("[LORA] Unix time received: %lu\n", (unsigned long)tp->unixTime);
+
+                if (globalState.status.homeSet)
+                {
+                    gpsInitAid(globalState.status.home.lat, globalState.status.home.lon, 0.0, tp->unixTime);
+                    Serial.println("[GPS] UBX aiding data injected");
+                }
+            }
+
+            globalState.status.loraTimeout = false;
+            xSemaphoreGive(stateMutex);
+        }
+    }
 }
 
 void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
-{
+{   
+    static uint32_t lastTimeReq = 0;
+
+    if (!globalState.status.timeSet && (millis() - lastTimeReq) > 5000)
+    {
+        uint8_t timeReqPacket = PKT_TIME_REQ;
+        beginTransmit(&timeReqPacket, 1);
+        lastTimeReq = millis();
+        return;
+    }
+    
     if (millis() - lastFastTele > 900)
     {
         telemetryFastPacket fastPkt = {};
@@ -204,7 +282,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 
             beginTransmit((uint8_t*)&slowPkt, sizeof(slowPkt));
             lastSlowTele = millis();
-            Serial.println("[LORA] Slow tele sent");
+            //Serial.println("[LORA] Slow tele sent");
         }
     }
 }

@@ -12,7 +12,7 @@ void WiFiInit()
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
     udp.begin(WIFI_RX_PORT);
 
-    Serial.print("Wifi AP started on: ");
+    Serial.print("[WIFI] Wifi AP started on: ");
     Serial.println(WiFi.softAPIP());
 }
 

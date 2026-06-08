@@ -27,6 +27,12 @@
 #define PKT_RESET_ERRORS 0x07
 #define PKT_DATA 0x10
 
+#define PKT_HOME_SET 0x08
+#define PKT_HOME_DATA 0x09
+#define PKT_HOME_REQ 0x0A
+#define PKT_TIME_REQ 0x0B
+#define PKT_TIME_DATA 0x0C
+
 #pragma pack(push, 1)
 
 struct telemetryFastPacket
@@ -74,6 +80,26 @@ struct controlPacket
 {
     uint8_t packetID;
     uint8_t mode;
+};
+
+struct homeSetPacket // From GUI: Set homeWP
+{
+    uint8_t packedID; // 0x08
+    double lat;
+    double lon;
+};
+
+struct homeDataPacket // Respond to PKT_HOME_REQ from GUI
+{
+    uint8_t packetID; // 0x09
+    double lat;
+    double lon;
+};
+
+struct timeDataPacket
+{
+    uint8_t packetID; // 0x0C
+    uint32_t unixTime;
 };
 
 #pragma pack(pop)

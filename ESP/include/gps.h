@@ -17,3 +17,5 @@ typedef struct
 
 int GPSInit();
 GPSData getGPS();
+
+void gpsInitAid(double lat, double lon, float altM, uint32_t unix);

@@ -23,6 +23,7 @@ typedef struct
 {
     uint8_t mode;
     uint8_t battery;
+    uint8_t targetWaypoint;
 
     bool loraTimeout;
     bool wifiTimeout;
@@ -30,11 +31,14 @@ typedef struct
 
     wp home;
     bool homeSet;
+    bool homeNeedsSave;
 
     bool routeReady;
     uint8_t targetIdx;
 
     uint32_t errorCode;
+    uint32_t unixTime;
+    bool timeSet;
 } SystemStatus;
 
 typedef struct 

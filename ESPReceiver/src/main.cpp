@@ -66,6 +66,9 @@ void loop()
         Serial.println(WiFi.localIP());
     }
 
+    // ── Received LoRa packet → forward to PC via Serial ──────────────────────
+    // Handles all boat→GUI packets: PKT_TELE_FAST, PKT_TELE_SLOW, PKT_DATA,
+    // PKT_HOME_DATA (0x09), PKT_TIME_REQ (0x0B) — all forwarded transparently.
     if (receivedFlag)
     {
         receivedFlag = false;
@@ -80,6 +83,7 @@ void loop()
         radio.startReceive();
     }
 
+    // ── WiFi UDP heartbeat → forward to PC via Serial ─────────────────────────
     if (udpReady)
     {
         int packetSize = udp.parsePacket();
@@ -98,11 +102,14 @@ void loop()
         uint8_t id = Serial.peek();
         int expected_len = 0;
 
-        if (id == PKT_WP_DATA) { expected_len = ROUTE_PACKET_SIZE;}
-        else if (id == PKT_CONTROL) { expected_len = CONTROL_PACKET_SIZE;}
-        else if (id == PKT_MANUAL) { expected_len = MANUAL_SERIAL_SIZE;}
-        else if (id == PKT_DATA) { expected_len = PKT_DATA_SIZE;}
-        else if (id == PKT_RESET_ERRORS) { expected_len = RESET_ERRORS_SIZE;}
+        if (id == PKT_WP_DATA) {expected_len = ROUTE_PACKET_SIZE;}
+        else if (id == PKT_CONTROL) {expected_len = CONTROL_PACKET_SIZE;}
+        else if (id == PKT_MANUAL) {expected_len = MANUAL_SERIAL_SIZE;}
+        else if (id == PKT_DATA) {expected_len = PKT_DATA_SIZE;}
+        else if (id == PKT_RESET_ERRORS) {expected_len = RESET_ERRORS_SIZE;}
+        else if (id == PKT_HOME_SET) {expected_len = HOME_SET_SIZE;}
+        else if (id == PKT_HOME_REQ) {expected_len = HOME_REQ_SIZE;}
+        else if (id == PKT_TIME_DATA) {expected_len = TIME_DATA_SIZE;}
         else
         {
             Serial.read();   // discard unknown byte
@@ -114,7 +121,13 @@ void loop()
             uint8_t txBuffer[64];
             Serial.readBytes(txBuffer, expected_len);
 
-            if (id == PKT_WP_DATA || id == PKT_CONTROL || id == PKT_DATA || id == PKT_RESET_ERRORS)
+            if (id == PKT_WP_DATA ||
+                id == PKT_CONTROL ||
+                id == PKT_DATA ||
+                id == PKT_RESET_ERRORS ||
+                id == PKT_HOME_SET ||
+                id == PKT_HOME_REQ ||
+                id == PKT_TIME_DATA)
             {
                 static uint32_t lastLoRaTx = 0;
 
@@ -131,6 +144,7 @@ void loop()
                     radio.startReceive();
                 }
             }
+
             else if (id == PKT_MANUAL)
             {
                 if (WiFi.status() == WL_CONNECTED)

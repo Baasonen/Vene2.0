@@ -17,13 +17,13 @@ int magInit()
 
     if (!bno085.begin_I2C())
     {
-        Serial.println("BNO085 not found");
+        Serial.println("[MAG] BNO085 not found");
         return 0;
     }
 
     if (!bno085.enableReport(SH2_ARVR_STABILIZED_ROTATION_VECTOR, 10000)) // 100 Hz
     {
-        Serial.println("Could not enable stablized rotation vector");
+        Serial.println("[MAG] Could not enable stablized rotation vector");
         return 0;
     }
 
@@ -68,8 +68,11 @@ MagData getMagnetometer()
             heading = 360.0 - heading; 
             uint8_t accuracy = sensorValue.status & 0x03;
 
-            
-            lastValid.heading = heading;
+            float declination = 10.0 + 13.0 / 60; // Olari, 8.6.2026
+            float geoHeading = heading + declination;
+            if (geoHeading >= 360.0) {geoHeading -= 360.0;}
+
+            lastValid.heading = geoHeading;
             lastValid.accuracy = accuracy;
             lastValid.valid = true;
 

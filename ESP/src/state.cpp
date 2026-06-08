@@ -20,16 +20,13 @@ uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
         case 2:
             // Autopilot
             if (status.loraTimeout) {return 0;}
-            if (!sensors.gps.valid || !sensors.mag.valid) {return 0;}
-            if (sensors.gps.hdop > GPS_MAX_HDOP) {return 0;}
-            if (sensors.mag.accuracy < MAG_MIN_ACC) {return 0;}
+            if (!sensors.gps.valid || !sensors.mag.valid || sensors.mag.accuracy < 2) {return 0;}
             if (!status.routeReady) {return 0;}
             return 2;
 
         case 3:
             if (!status.homeSet) {return 0;}
-            if (sensors.gps.hdop > GPS_MAX_HDOP) {return 0;}
-            if (!sensors.gps.valid) {return 0;}
+            if (!sensors.gps.valid || !sensors.mag.valid) {return 0;}
             return 3;
 
         default:

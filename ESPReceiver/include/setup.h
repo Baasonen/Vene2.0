@@ -31,3 +31,18 @@
 #define RESET_ERRORS_SIZE 1
 
 #define PKT_WIFI_HEARTBEAT 0x06
+
+#define PKT_HOME_SET 0x08
+#define HOME_SET_SIZE 17
+
+#define PKT_HOME_REQ 0x0A
+#define HOME_REQ_SIZE 1
+
+#define PKT_TIME_DATA 0x0C
+#define TIME_DATA_SIZE 5
+
+#define PKT_HOME_DATA 0x09
+#define HOME_DATA_SIZE 17
+
+#define PKT_TIME_REQ 0x0B
+#define TIME_REQ_SIZE 1

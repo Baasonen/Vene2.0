@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
+#include <Preferences.h>
 
 #include "esp_system.h"
 #include "esp_task_wdt.h"
@@ -16,9 +17,15 @@
 #include "control.h"
 #include "wifiComm.h"
 #include "sensorsInit.h"
+#include "navigation.h"
 
 #define WDT_TIMEOUT 5
 #define DEBUG true
+
+#define AP_THROTTLE 50
+#define WP_TRESHOLD 3
+
+Preferences prefs;
 
 State globalState = {0};
 SemaphoreHandle_t stateMutex;
@@ -66,11 +73,8 @@ void controlTask(void* pv)
             status = globalState.status;
             manual = globalState.manual;
  
-            if (globalState.route.newRouteAvailable)
-            {
-                route = globalState.route;
-                globalState.route.newRouteAvailable = false;
-            }
+            route = globalState.route;
+            globalState.route.newRouteAvailable = false;
  
             xSemaphoreGive(stateMutex);
         }
@@ -90,11 +94,33 @@ void controlTask(void* pv)
                 break;
  
             case 2: // AUTOPILOT
-                // TODO: PID / pure-pursuit against route
+                if (status.targetWaypoint == 0) {status.targetWaypoint = 1;}
+
+                if (distanceToPoint(sensors.gps.lat, sensors.gps.lon, route.waypoints[status.targetWaypoint].lat, route.waypoints[status.targetWaypoint].lon) <= WP_TRESHOLD)
+                {
+                    status.targetWaypoint++;
+
+                    if (status.targetWaypoint > route.length) {status.mode = 3;}
+                }
+
+                setThrottle(AP_THROTTLE);
+                steerTo(headingToPoint(sensors.gps.lat, sensors.gps.lon, route.waypoints[status.targetWaypoint].lat, route.waypoints[status.targetWaypoint].lon));
+
                 break;
  
             case 3: // RETURN HOME
-                // TODO: Steer toward route.waypoints[0] (home)
+                
+                if (distanceToPoint(status.home.lat, status.home.lon, sensors.gps.lat, sensors.gps.lon) > 10.0)
+                {
+                    setThrottle(AP_THROTTLE);
+                    steerTo(headingToPoint(sensors.gps.lat, sensors.gps.lon, status.home.lat, status.home.lon));
+                }
+                else
+                {
+                    turnRudder(0);
+                    setThrottle(0);
+                }
+
                 break;
  
             default:
@@ -107,6 +133,7 @@ void controlTask(void* pv)
         {
             globalState.sensors = sensors;
             globalState.status.mode = mode;
+            globalState.status.targetWaypoint = status.targetWaypoint;
             xSemaphoreGive(stateMutex);
         }
     }
@@ -165,6 +192,18 @@ void setup()
     stateMutex = xSemaphoreCreateMutex();
     sensorQueue = xQueueCreate(1, sizeof(SensorData));
 
+    prefs.begin("home", false);
+    double savedLat = prefs.getDouble("hLat", 0.0);
+    double savedLon = prefs.getDouble("hLon", 0.0);
+    prefs.end();
+
+    if (savedLat != 0.0 && savedLon != 0.0) {
+        globalState.status.home.lat = savedLat;
+        globalState.status.home.lon = savedLon;
+        globalState.status.homeSet = true;
+        Serial.printf("[PREFS] Loaded Home: %.6f, %.6f\n", savedLat, savedLon);
+    }
+
     bool initFail = sensorsInit();
 
     if (initFail) {Serial.println("[ERR] Sensor init failed");}
@@ -187,10 +226,31 @@ void setup()
     xTaskCreatePinnedToCore(diagTask, "Diag", 4096, NULL, 1, NULL, 0);
 
     esp_task_wdt_delete(NULL);
-    vTaskDelete(NULL);
+    //vTaskDelete(NULL);
 }
 
 void loop()
 {
+    if (globalState.status.homeNeedsSave)
+    {
+        double hLat = 0.0;
+        double hLon = 0.0;
 
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            hLat = globalState.status.home.lat;
+            hLon = globalState.status.home.lon;
+            globalState.status.homeNeedsSave = false;
+            xSemaphoreGive(stateMutex);
+
+            prefs.begin("home", false);
+            prefs.putDouble("hLat", hLat);
+            prefs.putDouble("hLon", hLon);
+            prefs.end();
+
+            Serial.println("[PREFS] Saved home wp");
+        }
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100));
 }
