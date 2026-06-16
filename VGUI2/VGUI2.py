@@ -10,6 +10,8 @@ from typing import Dict, Set, Tuple, Optional
 from GUI.themes import THEMES
 
 from GUI.Frames.connection_status import ConnectionStatusFrame
+from GUI.Frames.mode_select import ModeSelectFrame
+from GUI.Frames.telemetry import TelemetryFrame
 
 try:
     import pygame
@@ -67,9 +69,13 @@ class VGUI:
         self.col_right.pack_propagate(False)
 
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
+        self.mode_select_frame = ModeSelectFrame(self.col_left, self.theme, self.ctrl)
+        self.telemetry_frame = TelemetryFrame(self.col_right, self.theme, self.ctrl)
 
         self.frames = [
-            self.connection_frame
+            self.mode_select_frame,
+            self.connection_frame,
+            self.telemetry_frame
         ]
 
     def _refresh(self) -> None:
@@ -102,8 +108,12 @@ class VGUI:
         pass
 
     def _on_home_received(self, lat: float, lon: float) -> None:
-        self.root.after(0, lambda: self.status_panel.update(
-            self.ctrl.get_telemetry_data(), self.ctrl.get_connection_status()))
+        def _update() -> None:
+            telemetry = self.ctrl.get_telemetry_data()
+            connection = self.ctrl.get_connection_status()
+            for frame in self.frames:
+                frame.update(telemetry, connection)
+        self.root.after(0, _update)
 
         
 

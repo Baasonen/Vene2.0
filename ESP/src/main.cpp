@@ -56,7 +56,7 @@ void controlTask(void* pv)
  
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(50); 
-    SensorData sensors   = {};
+    SensorData sensors = {};
     SystemStatus status = {};
     ManualControls manual = {};
     Route route  = {};
@@ -179,6 +179,7 @@ void diagTask(void* pd)
         Serial.printf("Comms:   LoRa TO: %s  WiFi TO: %s\n",
                       status.loraTimeout ? "YES" : "NO",
                       status.wifiTimeout ? "YES" : "NO");
+        Serial.printf("LoRa RSSI: %i dBm\n", status.loraRSSI);
         Serial.println("----------------");
     }
 }

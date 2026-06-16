@@ -26,6 +26,7 @@ typedef struct
     uint8_t targetWaypoint;
 
     bool loraTimeout;
+    int8_t loraRSSI;
     bool wifiTimeout;
     uint32_t commTimeoutTriggerTime;
 

@@ -67,6 +67,12 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
 
     lastRSSI = (int8_t)constrain((int)radio.getRSSI(), INT8_MIN, INT8_MAX);
 
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)) == pdTRUE)
+    {
+        globalState.status.loraRSSI = lastRSSI;
+        xSemaphoreGive(stateMutex);
+    }
+
     uint8_t packetID = rxBuffer[0];
 
     // Route Packet
@@ -273,7 +279,8 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
         {
-            slowPkt.batt = globalState.status.battery;
+            slowPkt.batt = globalState.sensors.mag.accuracy;
+            //slowPkt.batt = globalState.status.battery;
             slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
             slowPkt.errorCode = globalState.status.errorCode;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
