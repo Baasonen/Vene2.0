@@ -18,6 +18,7 @@
 #include "wifiComm.h"
 #include "sensorsInit.h"
 #include "navigation.h"
+#include "errors.h"
 
 #define WDT_TIMEOUT 5
 #define DEBUG true
@@ -179,7 +180,9 @@ void diagTask(void* pd)
         Serial.printf("Comms:   LoRa TO: %s  WiFi TO: %s\n",
                       status.loraTimeout ? "YES" : "NO",
                       status.wifiTimeout ? "YES" : "NO");
-        Serial.printf("LoRa RSSI: %i dBm\n", status.loraRSSI);
+        Serial.printf("LoRa RSSI: %i dBm\n\n", status.loraRSSI);
+        Serial.printf("Errors: 0x%081X\n", (unsigned long)status.errorCode);
+        printActiveErrors();
         Serial.println("----------------");
     }
 }
@@ -187,8 +190,9 @@ void diagTask(void* pd)
 void setup()
 {
     Serial.begin(115200);
-    delay(100);
+    delay(1000);
     Serial.println("BOOT...");
+    delay(500);
 
     stateMutex = xSemaphoreCreateMutex();
     sensorQueue = xQueueCreate(1, sizeof(SensorData));
@@ -211,6 +215,8 @@ void setup()
 
     if (DEBUG) {globalState.status.homeSet = true;}
 
+    setError(ERR_INIT);
+
     controlInit();
     WiFiInit();
 
@@ -225,6 +231,7 @@ void setup()
     // CORE 0
     xTaskCreatePinnedToCore(commsTask, "Comms", 8192, NULL, 2, NULL, 0);
     xTaskCreatePinnedToCore(diagTask, "Diag", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(errorTask, "Error", 4096, NULL, 2, NULL, 0);
 
     esp_task_wdt_delete(NULL);
     //vTaskDelete(NULL);

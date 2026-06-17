@@ -12,6 +12,7 @@ from GUI.themes import THEMES
 from GUI.Frames.connection_status import ConnectionStatusFrame
 from GUI.Frames.mode_select import ModeSelectFrame
 from GUI.Frames.telemetry import TelemetryFrame
+from GUI.Frames.errors import ErrorFrame
 
 try:
     import pygame
@@ -69,13 +70,15 @@ class VGUI:
         self.col_right.pack_propagate(False)
 
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
-        self.mode_select_frame = ModeSelectFrame(self.col_left, self.theme, self.ctrl)
+        self.mode_select_frame = ModeSelectFrame(self.col_right, self.theme, self.ctrl)
         self.telemetry_frame = TelemetryFrame(self.col_right, self.theme, self.ctrl)
+        self.error_frame = ErrorFrame(self.col_left, self.theme, self.ctrl)
 
         self.frames = [
             self.mode_select_frame,
             self.connection_frame,
-            self.telemetry_frame
+            self.telemetry_frame,
+            self.error_frame
         ]
 
     def _refresh(self) -> None:
@@ -129,7 +132,7 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        controller.setup()
+        controller.stop()
 
 if __name__ == "__main__":
     main()

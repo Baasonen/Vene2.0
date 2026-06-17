@@ -1,5 +1,7 @@
 #include "lora.h"
 
+#include "errors.h"
+
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
 static int8_t lastRSSI = 0;
 static uint32_t txStartTime = 0;
@@ -158,9 +160,10 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
 
     else if ((packetID == PKT_RESET_ERRORS) && (len == sizeof(resetErrorsPacket)))
     {
+        clearAllErrors();
+
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
-            globalState.status.errorCode = 0;
             globalState.status.loraTimeout = false;
             xSemaphoreGive(stateMutex);
         }
@@ -279,8 +282,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
         {
-            slowPkt.batt = globalState.sensors.mag.accuracy;
-            //slowPkt.batt = globalState.status.battery;
+            slowPkt.batt = globalState.status.battery;
             slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
             slowPkt.errorCode = globalState.status.errorCode;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);

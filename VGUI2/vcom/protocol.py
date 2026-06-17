@@ -109,23 +109,25 @@ class uploadStatus(Enum):
 # Error bit definitions
 
 _DEFAULT_ERROR_BITS : Dict[int, Tuple[str, str]] = {
-    0: ("INIT_OK", "Init completede succesfully"),
-    1: ("GPS_MODULE_FAIL", "Could not connect to the GPS module"),
+    0: ("ERR_DEF", "Could not load error definitions from file"),
 }
 
-def load_error_defs(path: str = "error_codes.txt") -> Dict[int, Tuple[str, str]]:
+_DEFAULT_ERR_PATH = os.path.join(os.path.dirname(__file__), "error_codes.txt")
+
+def load_error_defs(path: str = _DEFAULT_ERR_PATH) -> Dict[int, Tuple[str, str]]:
     defs: Dict[int, Tuple[str, str]] = dict(_DEFAULT_ERROR_BITS)
 
     if not os.path.isfile(path):
+        print("error_codes.txt not found")
         return defs
     
     with open(path, encoding = "utf-8") as f:
         for raw in f:
-            line = raw.strp()
+            line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
 
-            bit_str, rest = line.strip("=", 1)
+            bit_str, rest = line.split("=", 1)
             bit_str = bit_str.strip().upper()
 
             if not bit_str.startswith("BIT"):

@@ -7,6 +7,7 @@ class TelemetryFrame(BaseFrame):
     METRICS = [
         ("POS", "GPS", "—, —"),
         ("HDG", "Heading", "—°"),
+        ("MAG", "Mag Accuracy", "—"),
         ("NAV", "Target WP (idx)", "—"),
         ("HOME", "Home WP", "—, —"),
         ("BAT", "Battery", "—%"),
@@ -14,9 +15,11 @@ class TelemetryFrame(BaseFrame):
         ("SIG", "LoRa RSSI", "— dBm"),
     ]
 
+    MAG_ACC_BIT_NAMES = ["HDG_A1", "HDG_A2", "HDG_A3"]
+
     def build(self):
         self.frame = tk.LabelFrame(
-            self.parent, text="Live Telemetry",
+            self.parent, text="Telemetry",
             font=("Segoe UI", 10, "bold"), padx=10, pady=8,
         )
         self.frame.pack(fill="x", pady=(0, 10))
@@ -24,6 +27,8 @@ class TelemetryFrame(BaseFrame):
         self.widgets = {}
         self._last_telemetry = None
         self._last_connection = None
+
+        self._mag_acc_bits = [self._find_bit(name) for name in self.MAG_ACC_BIT_NAMES]
 
         for code, label, default in self.METRICS:
             container = tk.Frame(self.frame, bg=self.theme["panel_bg"])
@@ -41,6 +46,13 @@ class TelemetryFrame(BaseFrame):
 
         self.apply_theme(self.theme)
 
+    def _find_bit(self, name: str):
+        for bit, (defname, _desc) in self.ctrl.error_defs.items():
+            if defname == name:
+                return bit
+            
+        return None
+
     def update(self, telemetry: dict, connection: dict) -> None:
         self._last_telemetry = telemetry
         self._last_connection = connection
@@ -54,6 +66,23 @@ class TelemetryFrame(BaseFrame):
         self.widgets["HDG"][0].config(text=f"{telemetry['heading']:.1f}°")
         self.widgets["NAV"][0].config(
             text=f"WP {telemetry['target_idx']} [{MODE_NAMES.get(telemetry['mode'], 'UNKNOWN')}]")
+        
+        mag, _, _ = self.widgets["MAG"]
+        error = telemetry.get("error", 0)
+
+        level = 0
+        for i, bit in enumerate(self._mag_acc_bits, start = 1):
+            if bit is not None and error >> bit & 1:
+                level = i
+
+        if level == 0:
+            mag.config(text = "0/3", fg = self.theme["red"])
+        elif level == 1:
+            mag.configure(text = "1/3", fg = self.theme["orange"])
+        elif level == 2:
+            mag.configure(text = "2/3", fg = self.theme["orange"])
+        else:
+            mag.configure(text = "3/3", fg = self.theme["green"])
 
         bat, _, _ = self.widgets["BAT"]
         bat.config(text=f"{telemetry['battery']}%",

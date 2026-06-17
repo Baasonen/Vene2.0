@@ -1,7 +1,8 @@
-# AUTO-GENERATED FILE -- DO NOT EDIT BY HAND
-# Source: errors.def
 # Format BIT<N>=SHORT_NAME : Description (optional)
-# Bits 0 - 31 supported
+# Bits 0 - 31 only
+#
+# Edit ONLY this file, then run generate_errors.py to regenerate
+# errors_generated.h and errors_generated.py
 
 BIT0=INIT : Init successful
 BIT1=GPS_FAIL : No valid gps fix
@@ -12,7 +13,7 @@ BIT5=BATT_LOW : Battery voltage low
 BIT6=LORA_TIMEOUT
 BIT7=WIFI_TIMEOUT
 BIT8=MOTOR_FAULT : Motor / ESC fault
-BIT9=NO_ROUTE : No route loaded, cannot enter AUTO
+BIT9=NO_ROUTE : No route loaded, cannot enable A/P
 BIT10=NO_HOME : Home WP not set
 BIT11=WATER_LOW : Water ingress sensor detected LOW water level
 BIT12=WATER_MID : Water ingress sensor detected MEDIUM water level
