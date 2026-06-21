@@ -36,7 +36,7 @@ inline uint32_t getErrorCode()
 
 inline void clearAllErrors()
 {
-    __atomic_store_n(&globalState.status.errorCode, (uint32_t)0, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&globalState.status.errorCode, (uint32_t)1, __ATOMIC_SEQ_CST);
 }
 
 inline void printActiveErrors()

@@ -7,7 +7,7 @@
 // Source: errors.def
 // =========================================================
 
-enum ErrorBit : uint32_t
+enum ErrorBit : uint8_t
 {
     ERR_INIT          = 0,  // Init successful
     ERR_GPS_FAIL      = 1,  // No valid gps fix
@@ -18,7 +18,7 @@ enum ErrorBit : uint32_t
     ERR_LORA_TIMEOUT  = 6,
     ERR_WIFI_TIMEOUT  = 7,
     ERR_MOTOR_FAULT   = 8,  // Motor / ESC fault
-    ERR_NO_ROUTE      = 9,  // No route loaded, cannot enter AUTO
+    ERR_NO_ROUTE      = 9,  // No route loaded, cannot enable A/P
     ERR_NO_HOME       = 10,  // Home WP not set
     ERR_WATER_LOW     = 11,  // Water ingress sensor detected LOW water level
     ERR_WATER_MID     = 12,  // Water ingress sensor detected MEDIUM water level
@@ -32,7 +32,7 @@ enum ErrorBit : uint32_t
 
 struct ErrorBitInfo
 {
-    uint32_t bit;
+    uint8_t bit;
     const char* name;
     const char* description;
 };
@@ -47,7 +47,7 @@ static const ErrorBitInfo ERROR_BIT_TABLE[ERROR_BIT_COUNT] = {
     { 6, "LORA_TIMEOUT", "" },
     { 7, "WIFI_TIMEOUT", "" },
     { 8, "MOTOR_FAULT", "Motor / ESC fault" },
-    { 9, "NO_ROUTE", "No route loaded, cannot enter AUTO" },
+    { 9, "NO_ROUTE", "No route loaded, cannot enable A/P" },
     { 10, "NO_HOME", "Home WP not set" },
     { 11, "WATER_LOW", "Water ingress sensor detected LOW water level" },
     { 12, "WATER_MID", "Water ingress sensor detected MEDIUM water level" },

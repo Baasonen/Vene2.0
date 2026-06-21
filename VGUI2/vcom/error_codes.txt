@@ -6,13 +6,13 @@
 BIT0=INIT : Init successful
 BIT1=GPS_FAIL : No valid gps fix
 BIT2=MAG_FAIL : Cannot connect to the magnetometer
-BIT3=GPS_ACC_LOW : Gps accuracy low
+BIT3=GPS_ACC_LOW : GPS accuracy low
 BIT4=MAG_ACC_LOW : Magnetometer accuracy low
 BIT5=BATT_LOW : Battery voltage low
 BIT6=LORA_TIMEOUT
 BIT7=WIFI_TIMEOUT
 BIT8=MOTOR_FAULT : Motor / ESC fault
-BIT9=NO_ROUTE : No route loaded, cannot enter AUTO
+BIT9=NO_ROUTE : No route loaded, cannot enable A/P
 BIT10=NO_HOME : Home WP not set
 BIT11=WATER_LOW : Water ingress sensor detected LOW water level
 BIT12=WATER_MID : Water ingress sensor detected MEDIUM water level

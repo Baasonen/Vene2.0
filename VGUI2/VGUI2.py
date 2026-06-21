@@ -9,10 +9,12 @@ from typing import Dict, Set, Tuple, Optional
 
 from GUI.themes import THEMES
 
-from GUI.Frames.connection_status import ConnectionStatusFrame
-from GUI.Frames.mode_select import ModeSelectFrame
-from GUI.Frames.telemetry import TelemetryFrame
-from GUI.Frames.errors import ErrorFrame
+from GUI.Frames.connection_status_frame import ConnectionStatusFrame
+from GUI.Frames.mode_select_frame import ModeSelectFrame
+from GUI.Frames.telemetry_frame import TelemetryFrame
+from GUI.Frames.errors_frame import ErrorFrame
+from GUI.Frames.waypoint_frame import WaypointFrame
+from GUI.Frames.map_frame import MapFrame
 
 try:
     import pygame
@@ -69,18 +71,32 @@ class VGUI:
         self.col_right.pack(side="left", fill="both", expand=False, padx=(5, 0))
         self.col_right.pack_propagate(False)
 
+        self.map_frame = MapFrame(self.col_mid, self.theme, self.ctrl, 
+                                  on_add_waypoint = self._on_add_waypoint,
+                                  on_set_home = self._on_set_home)
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
         self.mode_select_frame = ModeSelectFrame(self.col_right, self.theme, self.ctrl)
         self.telemetry_frame = TelemetryFrame(self.col_right, self.theme, self.ctrl)
         self.error_frame = ErrorFrame(self.col_left, self.theme, self.ctrl)
+        self.waypoint_frame = WaypointFrame(self.col_right, self.theme, self.ctrl, self.map_frame.widget)
 
         self.frames = [
             self.mode_select_frame,
             self.connection_frame,
             self.telemetry_frame,
-            self.error_frame
+            self.error_frame,
+            self.waypoint_frame,
+            self.map_frame
         ]
 
+        self.map_frame.set_tiles(self.current_theme_name == "dark")
+
+    def _on_add_waypoint(self, coords: Tuple[float, float]) -> None:
+        self.waypoint_frame.add_waypoint(coords)
+
+    def _on_set_home(self, coords: Tuple[float, float]) -> None:
+        self.ctrl.set_home(coords[0], coords[1])
+    
     def _refresh(self) -> None:
         telemetry = self.ctrl.get_telemetry_data()
         connection = self.ctrl.get_connection_status()
@@ -104,7 +120,7 @@ class VGUI:
         for frame in self.frames:
             frame.apply_theme(self.theme)
 
-        #self.map_frame.set_dark_tiles(self.current_theme_name == "dark")
+        self.map_frame.set_tiles(self.current_theme_name == "dark")
 
 
     def _on_error_change(self, new_bits, cleared_bits) -> None:

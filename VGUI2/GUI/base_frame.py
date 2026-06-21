@@ -15,6 +15,15 @@ class BaseFrame:
     def apply_theme(self, theme: dict) -> None:
         self.theme = theme
 
-        if self.theme is not None:
-            self.frame.config(bg = theme["panel_bg"], fg = theme["fg"],
-                              highlightbackground  = theme["border"], bd = 1, relief = "solid",)
+        if self.theme is not None and self.frame is not None:
+            config = {
+                "bg": theme["panel_bg"],
+                "highlightbackground": theme["border"],
+                "bd": 1,
+                "relief": "solid",
+            }
+
+            if "fg" in self.frame.keys():
+                config["fg"] = theme["fg"]
+
+            self.frame.config(**config)
