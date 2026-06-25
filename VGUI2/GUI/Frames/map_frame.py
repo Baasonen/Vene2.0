@@ -30,7 +30,7 @@ class MapFrame(BaseFrame):
         super().__init__(parent, theme, ctrl)
 
     def build(self):
-        self.frame = tk.LabelFrame(self.parent, text = "Nav Map",
+        self.frame = tk.LabelFrame(self.parent, text = "Map",
                                    font = ("Segoe UI", 10, "bold"), padx = 6, pady = 6,
                                    bg = self.theme["panel_bg"], fg = self.theme["fg"])
         self.frame.pack(fill = "both", expand = True)

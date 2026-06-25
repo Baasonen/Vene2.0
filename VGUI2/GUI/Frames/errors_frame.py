@@ -30,7 +30,7 @@ class ErrorFrame(BaseFrame):
                                    selectmode="browse", borderwidth=0, highlightthickness=0)
         self.listbox.pack(fill="x", pady=2)
 
-        self.log_label = tk.Label(self.frame, text="Event Log Stream:", font=("Segoe UI", 8, "bold"),
+        self.log_label = tk.Label(self.frame, text="Event Log", font=("Segoe UI", 8, "bold"),
                                   bg=self.theme["panel_bg"], fg=self.theme["fg_dim"])
         self.log_label.pack(anchor="w", pady=(4, 2))
 
@@ -72,7 +72,7 @@ class ErrorFrame(BaseFrame):
                     if name in IGNORED_LOG_NAMES:
                         continue
 
-                    self.listbox.insert("end", f"BIT {bit:02d}: {name} - {desc}")
+                    self.listbox.insert("end", f"{bit:02d}: {name} - {desc}")
     
                     color = self.theme["green"] if bit == 0 else self.theme["red"]
                     self.listbox.itemconfig("end", fg = color, bg = self.theme["canvas_bg"])

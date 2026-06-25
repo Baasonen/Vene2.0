@@ -54,9 +54,9 @@ class WaypointFrame(BaseFrame):
         self.refresh()
 
     def upload(self) -> None:
-        self.ctrl.send_test_route()
-        #if self.waypoints:
-        #    self.ctrl.send_route(self.waypoints)
+        #self.ctrl.send_test_route()
+        if self.waypoints:
+            self.ctrl.send_route(self.waypoints)
 
     # Reorder Functions
     def _move_up(self) -> None:

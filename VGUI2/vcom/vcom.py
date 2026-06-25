@@ -252,14 +252,14 @@ class Controller:
                     self._finish_upload(uploadStatus.FAILED)
                     return
  
-                self._ack_value = -1
+                self._ack_val = -1
                 self._ack_event.clear()
  
                 if not self._t.write(pkt):
                     self._finish_upload(uploadStatus.FAILED)
                     return
  
-                if self._ack_event.wait(timeout=ROUTE_TIMEOUT_S) and self._ack_value == order:
+                if self._ack_event.wait(timeout=ROUTE_TIMEOUT_S) and self._ack_val == order:
                     with self._data_lock:
                         self._upload_current = order + 1
                     acked = True
