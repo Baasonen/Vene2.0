@@ -36,7 +36,8 @@ inline uint32_t getErrorCode()
 
 inline void clearAllErrors()
 {
-    __atomic_store_n(&globalState.status.errorCode, (uint32_t)1, __ATOMIC_SEQ_CST);
+    uint32_t current = __atomic_load_n(&globalState.status.errorCode, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&globalState.status.errorCode, current & 0x1u, __ATOMIC_SEQ_CST); // Preserve the init bit
 }
 
 inline void printActiveErrors()
