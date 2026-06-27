@@ -36,6 +36,7 @@ class VGUI:
         self.root.configure(bg = self.theme["bg"])
 
         self._build_layout()
+        self._apply_ttk_style()
         
         # Callbacks
         self.ctrl.on_error_change = self._on_error_change
@@ -49,13 +50,16 @@ class VGUI:
                                bd = 1, relief = "solid", highlightbackground = self.theme["border"])
         self.header.pack(fill = "x", side = "top", pady = (0, 10))
 
-        tk.Label(self.header, text = f"VGUI {VERSION}", font = ("Sege UI", 11, "bold"),
-                 bg = self.theme["panel_bg"], fg = self.theme["fg"]).pack(side = "left", padx = 15)
+        self.lbl_title = tk.Label(self.header, text = f"VGUI {VERSION}", font = ("Segoe UI", 12, "bold"),
+                 bg = self.theme["panel_bg"], fg = self.theme["fg"])
+        self.lbl_title.pack(side = "left", padx = 15)
         
-        self.btn_theme = tk.Button(self.header, text = "Swithc Theme", font = ("Sege UI", 11, "bold"),
-                                   command = self._toggle_theme, bg = self.theme["bg"],
-                                   fg = self.theme["fg"], relief = "flat", bd = 0, padx = 10)
-        self.btn_theme.pack(side = "right", padx = 15, pady = 5)
+        self.theme_var = tk.StringVar(value = self.current_theme_name)
+        self.theme_combo = ttk.Combobox(self.header, textvariable = self.theme_var,
+                                        values = list(THEMES.keys()), state = "readonly",
+                                        font = ("Segoe UI", 12), width = 8)
+        self.theme_combo.pack(side = "right", padx = (15, 5), pady = 5)
+        self.theme_combo.bind("<<ComboboxSelected>>", self._on_theme_select)
 
         self.main = tk.Frame(self.root, bg=self.theme["bg"])
         self.main.pack(fill="both", expand=True, padx=10, pady=5)
@@ -106,13 +110,20 @@ class VGUI:
 
         self.root.after(100, self._refresh)
 
-    def _toggle_theme(self) -> None:
-        self.current_theme_name = "light" if self.current_theme_name == "dark" else "dark"
+    def _on_theme_select(self, event = None) -> None:
+        selected = self.theme_var.get()
+
+        if selected == self.current_theme_name:
+            return
+        
+        self.current_theme_name = selected
         self.theme = THEMES[self.current_theme_name]
+        self._apply_ttk_style()
 
         self.root.configure(bg = self.theme["bg"])
         self.header.config(bg = self.theme["panel_bg"], highlightbackground = self.theme["border"])
-        self.btn_theme.config(bg = self.theme["bg"])
+        self.lbl_title.config(bg = self.theme["panel_bg"], fg = self.theme["fg"])
+        self.main.config(bg = self.theme["bg"])
         self.col_left.config(bg = self.theme["bg"])
         self.col_mid.config(bg = self.theme["bg"])
         self.col_right.config(bg = self.theme["bg"])
@@ -120,7 +131,7 @@ class VGUI:
         for frame in self.frames:
             frame.apply_theme(self.theme)
 
-        self.map_frame.set_tiles(self.current_theme_name == "dark")
+        self.map_frame.set_tiles(self.theme["dark_map"])
 
 
     def _on_error_change(self, new_bits, cleared_bits) -> None:
@@ -134,7 +145,53 @@ class VGUI:
                 frame.update(telemetry, connection)
         self.root.after(0, _update)
 
-        
+    def _apply_ttk_style(self) -> None:
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        style.configure("TButton",
+            background = self.theme["panel_bg"],
+            foreground = self.theme["fg"],
+            bordercolor = self.theme["fg_dim"],
+            focuscolor = self.theme["border"],
+            relief = "solid",
+            borderwidth = 1,
+            padding = 4
+        )
+
+        style.map("TButton",
+            background = [("active", self.theme["accent"]), ("pressed", self.theme["bg"])],
+            foreground = [("active", self.theme["fg"])]
+        )
+
+        style.configure("TScrollbar",
+            background = self.theme["panel_bg"],
+            troughcolor = self.theme["canvas_bg"],
+            arrowcolor = self.theme["fg"],
+            bordercolor = self.theme["border"]
+        )
+
+        style.configure("TCombobox",
+            fieldbackground = self.theme["panel_bg"], 
+            background = self.theme["panel_bg"],
+            foreground = self.theme["fg"],
+            selectbackground = self.theme["panel_bg"], 
+            selectforeground = self.theme["fg"],
+            arrowcolor = self.theme["fg"]
+        )
+
+        style.map("TCombobox",
+            fieldbackground = [("readonly", self.theme["panel_bg"]),
+                               ("focus", self.theme["panel_bg"])],
+            selectbackground = [("readonly", self.theme["panel_bg"])],
+            selectforeground = [("readonly", self.theme["fg"])]
+        )
+
+        style.configure("Horizontal.TProgressbar",
+            background = self.theme["accent"],
+            troughcolor = self.theme["canvas_bg"],
+            bordercolor = self.theme["border"]
+        )
 
 def main() -> None:
     port = sys.argv[1] if len(sys.argv) > 1 else "COM4"

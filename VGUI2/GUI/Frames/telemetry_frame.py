@@ -60,8 +60,11 @@ class TelemetryFrame(BaseFrame):
 
     def _refresh(self, telemetry: dict, connection: dict) -> None:
         pos, _, _ = self.widgets["POS"]
-        pos.config(text=f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E"
-                   if telemetry["lat"] != 0 else "NO GPS FIX")
+
+        if telemetry["lat"] != 0:
+            pos.config(text=f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["fg"])
+        else:
+            pos.config(text = "NO GPS FIX", fg = self.theme["red"])
 
         self.widgets["HDG"][0].config(text=f"{telemetry['heading']:.1f}°")
         self.widgets["NAV"][0].config(
@@ -85,12 +88,24 @@ class TelemetryFrame(BaseFrame):
             mag.configure(text = "3/3", fg = self.theme["green"])
 
         bat, _, _ = self.widgets["BAT"]
-        bat.config(text=f"{telemetry['battery']}%",
+        bat.config(text = f"{telemetry['battery']}%",
                    fg=self.theme["green"] if telemetry["battery"] > 30 else self.theme["red"])
 
         gps, _, _ = self.widgets["GPS"]
-        gps.config(text=f"{telemetry['hdop']:.2f} (Good)" if telemetry["hdop"] < 1.5
-                   else f"{telemetry['hdop']:.2f} (Degraded)")
+
+        if telemetry['hdop'] == 0.0:
+            gps_text = f"{telemetry['hdop']:.2f} (N/A)"
+            gps_color = self.theme["red"]
+
+        elif telemetry['hdop'] < 1.5:
+            gps_text = f"{telemetry['hdop']:.2f} (Good)"
+            gps_color = self.theme["fg"]
+
+        else:
+            gps_text = f"{telemetry['hdop']:.2f} (Degraded)"
+            self.theme["ordange"]
+
+        gps.config(text = gps_text, fg = gps_color)
 
         self.widgets["SIG"][0].config(text=f"{telemetry['signal']} dBm")
 

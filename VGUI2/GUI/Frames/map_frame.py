@@ -3,12 +3,15 @@ from tkinter import ttk
 from typing import Callable, Tuple
 from PIL import Image, ImageDraw, ImageTk
 import tkintermapview
+import os
 
 from GUI.base_frame import BaseFrame
 
 ICON_SIZE = 50
-HOME_ICON_SIZE = 30
+HOME_ICON_SIZE = 20
 FALLBACK_POS = (60.1849, 24.8250)
+
+base_path = os.path.join(os.path.dirname(__file__), "..", "..")
 
 class MapFrame(BaseFrame):
     def __init__(self, parent, theme, ctrl,
@@ -27,6 +30,12 @@ class MapFrame(BaseFrame):
         self._last_heading = -1
         self._last_home = (0.0, 0.0)
 
+        try:
+            home_icon_path = os.path.join(base_path, "icons", "home_icon.png")
+            self._home_icon = tk.PhotoImage(file = home_icon_path)
+        except Exception:
+            print("Failed to load home icon")
+
         super().__init__(parent, theme, ctrl)
 
     def build(self):
@@ -43,11 +52,11 @@ class MapFrame(BaseFrame):
             self.toolbar, text = "Center on target", variable = self.follow_var,
             font = ("Segoe UI", 9), bg = self.theme["panel_bg"], fg = self.theme["fg"],
             activebackground = self.theme["panel_bg"], activeforeground = self.theme["fg"],
+            selectcolor = self.theme["checkbox"],
         )
         self.chk_follow.pack(side = "left", padx = 5)
 
         ttk.Button(self.toolbar, text = "Snap to target", command = self._center_on_target).pack(side = "left", padx = 6)
-        ttk.Button(self.toolbar, text = "Request home WP", command = self.ctrl.request_home).pack(side = "left", padx = 4)
 
         self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
         self.widget.pack(fill = "both", expand = True)
@@ -62,7 +71,8 @@ class MapFrame(BaseFrame):
         )
 
         self._v_img_orig = self._load_icon()
-        self._home_icon = ImageTk.PhotoImage(self._make_home_pin_icon())
+        if self._home_icon == None:
+            self._home_icon = ImageTk.PhotoImage(self._make_home_pin_icon())
 
     # Icon 
     @staticmethod
@@ -111,7 +121,7 @@ class MapFrame(BaseFrame):
         if old_marker is not None:
             old_marker.delete()
 
-        return self.widget.set_marker(lat, lon, icon = icon, text = text)
+        return self.widget.set_marker(lat, lon, icon = icon, text = text, text_color = self.theme["red"])
     
     # Toolbar Action
     def _center_on_target(self) -> None:
@@ -175,4 +185,5 @@ class MapFrame(BaseFrame):
 
         self.toolbar.config(bg = theme["panel_bg"])
         self.chk_follow.config(bg = theme["panel_bg"], fg = theme["fg"],
-                               activebackground = theme["panel_bg"], activeforeground = theme["fg"])
+                               activebackground = theme["panel_bg"], activeforeground = theme["fg"],
+                               selectcolor = self.theme["checkbox"])
