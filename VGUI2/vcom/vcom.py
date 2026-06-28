@@ -375,6 +375,7 @@ class Controller:
     def _send_time_data(self) -> None:
         pkt = struct.pack(TIME_DATA_FORMAT, PKT_TIME_DATA, int(time.time()))
         self._t.write(pkt)
+        print("[TIME] Sent current time")
 
     # LoRa monito
     def _lora_monitor(self) -> None:

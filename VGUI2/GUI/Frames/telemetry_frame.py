@@ -7,12 +7,12 @@ class TelemetryFrame(BaseFrame):
     METRICS = [
         ("POS", "GPS", "—, —"),
         ("HDG", "Heading", "—°"),
+        ("GPS", "GPS HDOP", "—"),
         ("MAG", "Mag Accuracy", "—"),
         ("NAV", "Target WP (idx)", "—"),
-        ("HOME", "Home WP", "—, —"),
         ("BAT", "Battery", "—%"),
-        ("GPS", "GPS HDOP", "—"),
         ("SIG", "LoRa RSSI", "— dBm"),
+        ("HOME", "Home WP", "—, —"),
     ]
 
     MAG_ACC_BIT_NAMES = ["HDG_A1", "HDG_A2", "HDG_A3"]

@@ -29,6 +29,8 @@ class ErrorFrame(BaseFrame):
                                   selectmode = "browse", borderwidth = 0, highlightthickness = 0)
         self.listbox.pack(fill = "x", pady = 2)
 
+        ttk.Button(self.frame, text = "Reset Errors", command = self.ctrl.reset_errors).pack(fill = "x", pady = (6, 0))
+
         self.log_label = tk.Label(self.frame, text = "Event Log", font = ("Segoe UI", 8, "bold"),
                                   bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
         self.log_label.pack(anchor = "w", pady = (4, 2))
@@ -36,7 +38,7 @@ class ErrorFrame(BaseFrame):
         self.log_frame = tk.Frame(self.frame, bg = self.theme["canvas_bg"])
         self.log_frame.pack(fill = "both", expand = True)
 
-        self.log = tk.Text(self.log_frame, height = 4, font = ("Consolas", 9),
+        self.log = tk.Text(self.log_frame, height = 4, font = ("Consolas", 12),
                            state = "disabled", wrap = "word",
                            borderwidth = 0, highlightthickness = 0,
                            bg = self.theme["canvas_bg"], fg = self.theme["fg"])
@@ -51,8 +53,6 @@ class ErrorFrame(BaseFrame):
         self.log.tag_configure("ts", foreground = self.theme["fg_dim"])
         self.log.tag_configure("stdout", foreground = self.theme["fg_dim"])
         self.log.tag_configure("stderr", foreground = self.theme["red"])
-
-        ttk.Button(self.frame, text = "Reset Errors", command = self.ctrl.reset_errors).pack(fill = "x", pady = (6, 0))
 
         self.apply_theme(self.theme)
         self._attach_console()

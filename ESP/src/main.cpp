@@ -21,7 +21,6 @@
 #include "errors.h"
 
 #define WDT_TIMEOUT 5
-#define DEBUG true
 
 #define AP_THROTTLE 50
 #define WP_TRESHOLD 3
@@ -153,6 +152,8 @@ void wifiTask(void* pv)
 // CORE 0 | PRIORITY 1 | 0.5 HZ
 void diagTask(void* pd)
 {
+    uint32_t startMillis = millis();
+
     for(;;)
     {
         vTaskDelay(pdMS_TO_TICKS(2000));
@@ -168,22 +169,25 @@ void diagTask(void* pd)
             xSemaphoreGive(stateMutex);
         }
 
-        Serial.println("\n--- VENE 2.0 ---");
-        Serial.printf("Mode:    %u\n", status.mode);
-        Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HDOP: %.2f\n",
-                      sensors.gps.valid ? "OK " : "BAD",
-                      sensors.gps.lat, sensors.gps.lon,
-                      sensors.gps.satellites, sensors.gps.hdop);
-        Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
-                      sensors.mag.valid ? "OK " : "BAD",
-                      sensors.mag.heading, sensors.mag.accuracy);
-        Serial.printf("Comms:   LoRa TO: %s  WiFi TO: %s\n",
-                      status.loraTimeout ? "YES" : "NO",
-                      status.wifiTimeout ? "YES" : "NO");
-        Serial.printf("LoRa RSSI: %i dBm\n\n", status.loraRSSI);
-        Serial.printf("Errors: 0x%081X\n", (unsigned long)status.errorCode);
-        printActiveErrors();
-        Serial.println("----------------");
+        if (millis() - startMillis > 15000)
+        {
+            Serial.println("\n--- VENE 2.0 ---");
+            Serial.printf("Mode:    %u\n", status.mode);
+            Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HDOP: %.2f\n",
+                          sensors.gps.valid ? "OK " : "BAD",
+                          sensors.gps.lat, sensors.gps.lon,
+                          sensors.gps.satellites, sensors.gps.hdop);
+            Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
+                          sensors.mag.valid ? "OK " : "BAD",
+                          sensors.mag.heading, sensors.mag.accuracy);
+            Serial.printf("Comms:   LoRa TO: %s  WiFi TO: %s\n",
+                          status.loraTimeout ? "YES" : "NO",
+                          status.wifiTimeout ? "YES" : "NO");
+            Serial.printf("LoRa RSSI: %i dBm\n\n", status.loraRSSI);
+            Serial.printf("Errors: 0x%081X\n", (unsigned long)status.errorCode);
+            //printActiveErrors();
+            Serial.println("----------------");
+        }
     }
 }
 
@@ -209,16 +213,14 @@ void setup()
         Serial.printf("[PREFS] Loaded Home: %.6f, %.6f\n", savedLat, savedLon);
     }
 
-    bool initFail = sensorsInit();
+    bool sensorInitFail = sensorsInit();
 
-    if (initFail) {Serial.println("[ERR] Sensor init failed");}
-
-    if (DEBUG) {globalState.status.homeSet = true;}
-
-    setError(ERR_INIT);
+    if (sensorInitFail) {Serial.println("[ERR] Sensor init failed");}
 
     controlInit();
     WiFiInit();
+
+    setError(ERR_INIT);
 
     esp_task_wdt_init(WDT_TIMEOUT, true);
     esp_task_wdt_add(NULL);

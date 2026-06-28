@@ -9,11 +9,15 @@ void ubxSaveConfig(Stream &port);
 int GPSInit()
 {
     gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN);
+    delay(1000);
 
     // One-time config
-    //delay(1000);
     //ubxEnableSBAS(gpsSerial);
     //ubxSaveConfig(gpsSerial);
+
+    // Uncomment for reset
+    //ubxClearConfig(gpsSerial);
+    //ubxColdReset(gpsSerial);
 
     uint32_t start = millis(); // Wait 3s and check if communication
     while (millis() - start < 3000)
@@ -51,6 +55,31 @@ GPSData getGPS()
     if ((millis() - lastValid) > 3000) {data.valid = false;}
 
     return data;
+}
+
+void ubxClearConfig(Stream &port)
+{
+    const uint8_t payload[] = {
+        0xFF, 0xFF, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0xFF, 0xFF, 0x00, 0x00,
+        0x07
+    };
+
+    sendUBX(port, 0x06, 0x09, payload, sizeof(payload));
+    delay(500);
+}
+
+void ubxColdReset(Stream &port)
+{
+    const uint8_t payload[] = {
+        0xFF, 0xFF, // Clear all nav data
+        0x01, // Software rst
+        0x00
+    };
+
+    sendUBX(port, 0x06, 0x04, payload, sizeof(payload));
+    delay(1000);
 }
 
 // Neo 6M config
@@ -91,7 +120,7 @@ void ubxEnableSBAS(Stream &port)
 {
     const uint8_t payload[] = {
         0x01, //Mode : Enabled | Disabled
-        0x07, // Usage : Ranging | Diff. corr. | Integrity corr.
+        0x03, // Usage : Ranging | Diff. corr. | Integrity corr.
         0x03, //MaxSBAS : 0 - 3
         0x00, // Scanmode2 
         0x00, 0x00, 0x00, 0x00 // Scanmode1
@@ -142,25 +171,29 @@ void ubxInitAid(Stream &port, double lat, double lon, float altM, uint32_t unix)
     int32_t altCm = (int32_t)(altM * 100.0f);
     uint32_t posAcc = 500000; // 5km in cm
     uint16_t tmCfg = 0; 
-    uint32_t towAccMs = 15000; // 15s
+    int32_t towNs = 0;
+    uint32_t towAccMs = 2000; // 15s
     uint32_t towAccNs = 0;
     int32_t clkD = 0;
     uint32_t clkDAcc = 0;
-    uint32_t flags = 0x00000006;
+    uint32_t flags = 0x23;
 
     uint8_t payload[48] = {};
     memcpy(payload + 0, &latI, 4);
     memcpy(payload + 4, &lonI, 4);
     memcpy(payload + 8, &altCm, 4);
     memcpy(payload + 12, &posAcc, 4);
+
     memcpy(payload + 16, &tmCfg, 2);
     memcpy(payload + 18, &gpsWeek, 2);
     memcpy(payload + 20, &gpsTOW_ms, 4);
-    memcpy(payload + 24, &towAccMs, 4);
-    memcpy(payload + 28, &towAccNs, 4);
-    memcpy(payload + 32, &clkD, 4);
-    memcpy(payload + 36, &clkDAcc, 4);
-    memcpy(payload + 40, &flags, 4);
+
+    memcpy(payload + 24, &towNs, 4);
+    memcpy(payload + 28, &towAccMs, 4);
+    memcpy(payload + 32, &towAccNs, 4);
+    memcpy(payload + 36, &clkD, 4);
+    memcpy(payload + 40, &clkDAcc, 4);
+    memcpy(payload + 44, &flags, 4);
 
     sendUBX(port, 0x0B, 0x01, payload, 48);
 }

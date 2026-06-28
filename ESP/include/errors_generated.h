@@ -26,9 +26,10 @@ enum ErrorBit : uint8_t
     ERR_HDG_A1        = 14,  // Heading accuracy 1
     ERR_HDG_A2        = 15,  // Heading accuracy 2
     ERR_HDG_A3        = 16,  // Heading accuracy 3
+    ERR_BAT_UB        = 17,  // Battery cell voltages unbalanced
 };
 
-#define ERROR_BIT_COUNT 17
+#define ERROR_BIT_COUNT 18
 
 struct ErrorBitInfo
 {
@@ -55,5 +56,6 @@ static const ErrorBitInfo ERROR_BIT_TABLE[ERROR_BIT_COUNT] = {
     { 14, "HDG_A1", "Heading accuracy 1" },
     { 15, "HDG_A2", "Heading accuracy 2" },
     { 16, "HDG_A3", "Heading accuracy 3" },
+    { 17, "BAT_UB", "Battery cell voltages unbalanced" },
 };
 

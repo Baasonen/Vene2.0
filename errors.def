@@ -21,3 +21,4 @@ BIT13=WATER_HIGH : Water ingress sensor detected HIGH water level
 BIT14=HDG_A1 : Heading accuracy 1
 BIT15=HDG_A2 : Heading accuracy 2
 BIT16=HDG_A3 : Heading accuracy 3
+BIT17=BAT_UB : Battery cell voltages unbalanced

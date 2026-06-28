@@ -52,19 +52,19 @@ class WaypointFrame(BaseFrame):
         ttk.Button(self.move_bar, text="↑", width=3, command=self._move_up).pack(pady=(0, 2))
         ttk.Button(self.move_bar, text="↓", width=3, command=self._move_down).pack()
 
-        self.ctrl_bar = tk.Frame(self.frame, bg = self.theme["panel_bg"])
-        self.ctrl_bar.pack(fill  ="x", pady = (6, 0))
-
-        ttk.Button(self.ctrl_bar, text = "Clear Route", command = self.clear).pack(side = "left", fill = "x", expand = True, padx = (0, 2))
-        ttk.Button(self.ctrl_bar, text = "Upload Route", command = self.upload).pack(side = "right", fill = "x", expand = True, padx = (2, 0))
+        self.status_label = tk.Label(self.frame, text = "No Route", font = ("Segoe UI", 12, "bold"),
+                                     anchor = "w", bg = self.theme["panel_bg"], fg = self._status_color("idle"))
+        self.status_label.pack(fill = "x")
 
         self.progress_var = tk.IntVar(value = 0)
         self.progress_bar = ttk.Progressbar(self.frame, variable = self.progress_var, maximum = 100, mode = "determinate")
         self.progress_bar.pack(fill = "x", pady = (8, 2))
 
-        self.status_label = tk.Label(self.frame, text = "No Route", font = ("Segoe UI", 12, "bold"),
-                                     anchor = "w", bg = self.theme["panel_bg"], fg = self._status_color("idle"))
-        self.status_label.pack(fill = "x")
+        self.ctrl_bar = tk.Frame(self.frame, bg = self.theme["panel_bg"])
+        self.ctrl_bar.pack(fill  ="x", pady = (6, 0))
+
+        ttk.Button(self.ctrl_bar, text = "Clear Route", command = self.clear).pack(side = "left", fill = "x", expand = True, padx = (0, 2))
+        ttk.Button(self.ctrl_bar, text = "Upload Route", command = self.upload).pack(side = "right", fill = "x", expand = True, padx = (2, 0))
 
     def add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoints.append(coords)

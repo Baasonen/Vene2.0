@@ -245,8 +245,9 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 {   
     static uint32_t lastTimeReq = 0;
 
-    if (!globalState.status.timeSet && (millis() - lastTimeReq) > 5000)
+    if (!globalState.status.timeSet && (millis() - lastTimeReq) > 2000)
     {
+        Serial.println("[TIME] Requesting current time");
         uint8_t timeReqPacket = PKT_TIME_REQ;
         beginTransmit(&timeReqPacket, 1);
         lastTimeReq = millis();
