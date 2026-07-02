@@ -47,7 +47,7 @@ class MapFrame(BaseFrame):
         self.toolbar = tk.Frame(self.frame, bg = self.theme["panel_bg"])
         self.toolbar.pack(fill = "x", pady = (0, 6))
 
-        self.follow_var = tk.BooleanVar(value = True)
+        self.follow_var = tk.BooleanVar(value = False)
         self.chk_follow = tk.Checkbutton(
             self.toolbar, text = "Center on target", variable = self.follow_var,
             font = ("Segoe UI", 9), bg = self.theme["panel_bg"], fg = self.theme["fg"],
