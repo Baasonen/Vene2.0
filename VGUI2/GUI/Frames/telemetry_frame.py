@@ -103,7 +103,7 @@ class TelemetryFrame(BaseFrame):
 
         else:
             gps_text = f"{telemetry['hdop']:.2f}"
-            self.theme["orange"]
+            gps_color = self.theme["orange"]
 
         gps.config(text = gps_text, fg = gps_color)
 

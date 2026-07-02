@@ -15,6 +15,7 @@ from GUI.Frames.telemetry_frame import TelemetryFrame
 from GUI.Frames.errors_frame import ErrorFrame
 from GUI.Frames.waypoint_frame import WaypointFrame
 from GUI.Frames.map_frame import MapFrame
+from GUI.Frames.manual_control_frame import ManualControlFrame
 
 try:
     import pygame
@@ -80,12 +81,14 @@ class VGUI:
                                   on_set_home = self._on_set_home)
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
         self.mode_select_frame = ModeSelectFrame(self.col_right, self.theme, self.ctrl)
+        self.manual_control_frame = ManualControlFrame(self.col_right, self.theme, self.ctrl, self.root)
         self.telemetry_frame = TelemetryFrame(self.col_right, self.theme, self.ctrl)
         self.error_frame = ErrorFrame(self.col_left, self.theme, self.ctrl)
         self.waypoint_frame = WaypointFrame(self.col_right, self.theme, self.ctrl, self.map_frame.widget)
 
         self.frames = [
             self.mode_select_frame,
+            self.manual_control_frame,
             self.connection_frame,
             self.telemetry_frame,
             self.error_frame,

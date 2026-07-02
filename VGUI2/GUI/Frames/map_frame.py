@@ -7,7 +7,7 @@ import os
 
 from GUI.base_frame import BaseFrame
 
-ICON_SIZE = 50
+ICON_SIZE = 30
 HOME_ICON_SIZE = 20
 FALLBACK_POS = (60.1849, 24.8250)
 
