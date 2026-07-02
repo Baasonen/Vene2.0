@@ -9,10 +9,10 @@
 #include "state.h"
 
 #define LORA_SCK 14
-#define LORA_MISO 12
+#define LORA_MISO 26
 #define LORA_MOSI 13
 #define LORA_CS 15
-#define LORA_DIO0 26
+#define LORA_DIO0 12
 
 #define LORA_FREQ 868.5
 #define LORA_BANDWIDTH 125.0

@@ -6,6 +6,9 @@ static HardwareSerial gpsSerial(2);
 void ubxEnableSBAS(Stream &port);
 void ubxSaveConfig(Stream &port);
 
+void ubxClearConfig(Stream &port);
+void ubxColdReset(Stream &port);
+
 int GPSInit()
 {
     gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN);
@@ -38,7 +41,7 @@ GPSData getGPS()
 
     if (gps.location.isValid())
     {   
-        if (gps.hdop.hdop() < 1.5)
+        if (gps.hdop.hdop() < 3)
         {
             data.lat = gps.location.lat();
             data.lon = gps.location.lng();
@@ -55,31 +58,6 @@ GPSData getGPS()
     if ((millis() - lastValid) > 3000) {data.valid = false;}
 
     return data;
-}
-
-void ubxClearConfig(Stream &port)
-{
-    const uint8_t payload[] = {
-        0xFF, 0xFF, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0xFF, 0xFF, 0x00, 0x00,
-        0x07
-    };
-
-    sendUBX(port, 0x06, 0x09, payload, sizeof(payload));
-    delay(500);
-}
-
-void ubxColdReset(Stream &port)
-{
-    const uint8_t payload[] = {
-        0xFF, 0xFF, // Clear all nav data
-        0x01, // Software rst
-        0x00
-    };
-
-    sendUBX(port, 0x06, 0x04, payload, sizeof(payload));
-    delay(1000);
 }
 
 // Neo 6M config
@@ -114,6 +92,31 @@ void sendUBX(Stream &port, uint8_t cls, uint8_t id, const uint8_t* payload, uint
 
     port.write(ck_a);
     port.write(ck_b);
+}
+
+void ubxClearConfig(Stream &port)
+{
+    const uint8_t payload[] = {
+        0xFF, 0xFF, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0xFF, 0xFF, 0x00, 0x00,
+        0x07
+    };
+
+    sendUBX(port, 0x06, 0x09, payload, sizeof(payload));
+    delay(500);
+}
+
+void ubxColdReset(Stream &port)
+{
+    const uint8_t payload[] = {
+        0xFF, 0xFF, // Clear all nav data
+        0x01, // Software rst
+        0x00
+    };
+
+    sendUBX(port, 0x06, 0x04, payload, sizeof(payload));
+    delay(1000);
 }
 
 void ubxEnableSBAS(Stream &port)

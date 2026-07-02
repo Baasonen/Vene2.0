@@ -94,16 +94,16 @@ class TelemetryFrame(BaseFrame):
         gps, _, _ = self.widgets["GPS"]
 
         if telemetry['hdop'] == 0.0:
-            gps_text = f"{telemetry['hdop']:.2f} (N/A)"
+            gps_text = f"{telemetry['hdop']:.2f}"
             gps_color = self.theme["red"]
 
         elif telemetry['hdop'] < 1.5:
-            gps_text = f"{telemetry['hdop']:.2f} (Good)"
-            gps_color = self.theme["fg"]
+            gps_text = f"{telemetry['hdop']:.2f}"
+            gps_color = self.theme["green"]
 
         else:
-            gps_text = f"{telemetry['hdop']:.2f} (Degraded)"
-            self.theme["ordange"]
+            gps_text = f"{telemetry['hdop']:.2f}"
+            self.theme["orange"]
 
         gps.config(text = gps_text, fg = gps_color)
 

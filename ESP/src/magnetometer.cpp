@@ -68,8 +68,10 @@ MagData getMagnetometer()
             heading = 360.0 - heading; 
             uint8_t accuracy = sensorValue.status & 0x03;
 
-            float declination = 10.0 + 13.0 / 60; // Olari, 8.6.2026
-            float geoHeading = heading + declination;
+            const float declination = 10.0 + 13.0 / 60; // Olari, 8.6.2026
+            const float offset = 180.0f;
+            
+            float geoHeading = heading + declination + offset;
             if (geoHeading >= 360.0) {geoHeading -= 360.0;}
 
             lastValid.heading = geoHeading;
