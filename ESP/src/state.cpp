@@ -28,7 +28,7 @@ uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
         
         case 3:
             if (!status.homeSet) {return 0;}
-            if (!sensors.gps.valid || !sensors.mag.valid) {return 0;}
+            if (hasError(ERR_GPS_ACC_LOW) || hasError(ERR_GPS_FAIL) || hasError(ERR_MAG_ACC_LOW) || hasError(ERR_MAG_FAIL)) {return 0;}
             return 3;
 
         default:

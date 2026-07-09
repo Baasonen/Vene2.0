@@ -41,6 +41,29 @@ void completeTransmit()
     radio.startReceive();
 }
 
+void resetLoRa()
+{
+    Serial.println("[LORA] Reseting due to TX stuck");
+
+    detachInterrupt(digitalPinToInterrupt(LORA_DIO0));
+
+    int state = radio.begin(LORA_FREQ, LORA_BANDWIDTH, LORA_SF, LORA_CODING_RATE, RADIOLIB_SX127X_SYNC_WORD, LORA_POWER);
+
+    if (state != RADIOLIB_ERR_NONE)
+    {
+        Serial.print("[LORA] Reinit failed: ");
+        Serial.println(state);
+    }
+
+    xSemaphoreTake(txDoneSem, 0);
+    xSemaphoreTake(rxPacketSem, 0);
+
+    loraDir = LORA_DIR_RX;
+    radio.startReceive();
+
+    attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
+}
+
 int LoRaInit()
 {
     SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, -1);
@@ -347,7 +370,7 @@ void commsTask(void* pvParameters)
         else if (loraDir == LORA_DIR_TX && txStartTime != 0 && (millis() - txStartTime) > 500)
         {
             Serial.println("[LORA] TX timeout, forcing RX");
-            completeTransmit();
+            resetLoRa();
             txStartTime = 0;
         }
 

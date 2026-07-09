@@ -1,4 +1,5 @@
 #include "gps.h"
+#include "errors.h"
 
 static TinyGPSPlus gps;
 static HardwareSerial gpsSerial(2);
@@ -25,7 +26,12 @@ int GPSInit()
     uint32_t start = millis(); // Wait 3s and check if communication
     while (millis() - start < 3000)
     {
-        if (gpsSerial.available() > 10) {return 1;}
+        if (gpsSerial.available() > 10) 
+        {
+            setError(ERR_GPS_INIT);
+
+            return 1;
+        }
     }
 
     return 0;
