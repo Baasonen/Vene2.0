@@ -242,6 +242,10 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
         lastPacketReceivedTime = millis();
         timeDataPacket* tp = (timeDataPacket*)rxBuffer;
 
+        bool homeSetLocal = false;
+        double homeLatLocal = 0.0;
+        double homeLonLocal = 0.0;
+
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
             if (!globalState.status.timeSet)
@@ -253,14 +257,46 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
 
                 if (globalState.status.homeSet)
                 {
-                    gpsInitAid(globalState.status.home.lat, globalState.status.home.lon, 0.0, tp->unixTime);
-                    Serial.println("[GPS] UBX aiding data injected");
+                    homeSetLocal = true;
+
+                    homeLatLocal = globalState.status.home.lat;
+                    homeLonLocal = globalState.status.home.lon;
                 }
             }
 
             globalState.status.loraTimeout = false;
             xSemaphoreGive(stateMutex);
         }
+
+        if (homeSetLocal)
+        {
+            gpsInitAid(homeLatLocal, homeLonLocal, 0.0, tp->unixTime);
+
+            Serial.println("[GPS] UBX aiding data injected");
+        }
+    }
+
+    else if ((packetID == PKT_COURSE_SET) && (len == sizeof(courseSetPacket)))
+    {
+        lastPacketReceivedTime = millis();
+        courseSetPacket* cp = (courseSetPacket*)rxBuffer;
+
+        courseDataPacket response = {};
+        response.packetID = PKT_COURSE_DATA;
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            if (cp->course >= 0.0 && cp->course < 360.0f)
+            {
+                globalState.status.targetCourse = cp->course;
+            }
+
+            response.course = globalState.status.targetCourse;
+            globalState.status.loraTimeout = false;
+            xSemaphoreGive(stateMutex);
+        }
+
+        beginTransmit((uint8_t*)&response, sizeof(response));
     }
 }
 
@@ -287,7 +323,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
             fastPkt.lat = globalState.sensors.gps.lat;
             fastPkt.lon = globalState.sensors.gps.lon;
             fastPkt.heading = globalState.sensors.mag.heading;
-            fastPkt.targetIdx = globalState.status.targetIdx;
+            fastPkt.targetIdx = globalState.status.targetWaypoint;
             fastPkt.mode = globalState.status.mode;
             
             xSemaphoreGive(stateMutex);

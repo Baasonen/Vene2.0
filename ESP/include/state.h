@@ -24,6 +24,7 @@ typedef struct
     uint8_t mode;
     uint8_t battery;
     uint8_t targetWaypoint;
+    int16_t targetCourse;
 
     bool loraTimeout;
     int8_t loraRSSI;
@@ -35,7 +36,6 @@ typedef struct
     bool homeNeedsSave;
 
     bool routeReady;
-    uint8_t targetIdx;
 
     uint32_t errorCode;
     uint32_t unixTime;

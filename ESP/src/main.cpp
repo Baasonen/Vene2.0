@@ -16,7 +16,6 @@
 #include "state.h"
 #include "control.h"
 #include "wifiComm.h"
-#include "sensorsInit.h"
 #include "navigation.h"
 #include "errors.h"
 
@@ -24,6 +23,7 @@
 
 #define AP_THROTTLE 50
 #define WP_TRESHOLD 3
+#define HOME_TRESHOLD 5
 
 Preferences prefs;
 
@@ -110,7 +110,7 @@ void controlTask(void* pv)
  
             case 3: // RETURN HOME
                 
-                if (distanceToPoint(status.home.lat, status.home.lon, sensors.gps.lat, sensors.gps.lon) > 10.0)
+                if (distanceToPoint(status.home.lat, status.home.lon, sensors.gps.lat, sensors.gps.lon) > HOME_TRESHOLD)
                 {
                     setThrottle(AP_THROTTLE);
                     steerTo(headingToPoint(sensors.gps.lat, sensors.gps.lon, status.home.lat, status.home.lon));
@@ -122,6 +122,10 @@ void controlTask(void* pv)
                 }
 
                 break;
+
+            case 4: // COURSE HOLD
+                steerTo(status.targetCourse);
+                setThrottle(0);
  
             default:
                 turnRudder(0);
@@ -184,7 +188,7 @@ void diagTask(void* pd)
                           status.loraTimeout ? "YES" : "NO",
                           status.wifiTimeout ? "YES" : "NO");
             Serial.printf("LoRa RSSI: %i dBm\n\n", status.loraRSSI);
-            Serial.printf("Errors: 0x%081X\n", (unsigned long)status.errorCode);
+            Serial.printf("Errors: 0x%08X\n", (unsigned long)status.errorCode);
             //printActiveErrors();
             Serial.println("----------------");
         }
@@ -213,9 +217,12 @@ void setup()
         Serial.printf("[PREFS] Loaded Home: %.6f, %.6f\n", savedLat, savedLon);
     }
 
-    bool sensorInitFail = sensorsInit();
+    bool sensorInitFail = false;
 
-    if (sensorInitFail) {Serial.println("[ERR] Sensor init failed");}
+    if (!magInit()) {Serial.println("[INIT] Mag init fail"); sensorInitFail = true;}
+    if (!GPSInit()) {Serial.println("[INIT] GPS init failed"); sensorInitFail = true;}
+
+    if (!sensorInitFail) {Serial.println("[INIT] Sensor init OK");}
 
     controlInit();
     WiFiInit();

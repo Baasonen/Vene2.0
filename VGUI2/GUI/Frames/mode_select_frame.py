@@ -3,7 +3,7 @@ import tkinter as tk
 from GUI.base_frame import BaseFrame
 
 class ModeSelectFrame(BaseFrame):
-    MODES = [(0, "STOP"), (1, "MANUAL"), (2, "A/P"), (3, "RTH")]
+    MODES = [(0, "STOP"), (1, "MANUAL"), (2, "A/P"), (3, "RTH"), (4, "CRS")]
     PENDING_TIMEOUT = 5.0 
 
     def build(self):

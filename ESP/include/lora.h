@@ -32,6 +32,8 @@
 #define PKT_HOME_REQ 0x0A
 #define PKT_TIME_REQ 0x0B
 #define PKT_TIME_DATA 0x0C
+#define PKT_COURSE_SET 0x0D
+#define PKT_COURSE_DATA 0x0E
 
 #pragma pack(push, 1)
 
@@ -100,6 +102,18 @@ struct timeDataPacket
 {
     uint8_t packetID; // 0x0C
     uint32_t unixTime;
+};
+
+struct courseSetPacket
+{
+    uint8_t packetID;
+    int16_t course;
+};
+
+struct courseDataPacket
+{
+    uint8_t packetID;
+    int16_t course;
 };
 
 #pragma pack(pop)

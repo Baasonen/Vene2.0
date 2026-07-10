@@ -51,7 +51,7 @@ void steerTo(float targetHeading)
     int8_t angle = (int8_t) (error * Kp);
 
     if (angle > RUDDER_U_LIM) {angle = RUDDER_U_LIM;}
-    if (angle < RUDDER_L_LIM) {angle = RUDDER_U_LIM;}
+    if (angle < RUDDER_L_LIM) {angle = RUDDER_L_LIM;}
 
     turnRudder(angle);
 }

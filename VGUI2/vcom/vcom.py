@@ -11,12 +11,14 @@ from vcom.comms import SerialTransport
 from vcom.protocol import (
     ACK_FORMAT, CONTROL_FORMAT, FAST_FORMAT, HOME_FORMAT,
     RESET_ERRORS_FORMAT, ROUTE_FORMAT, SLOW_FORMAT, TIME_DATA_FORMAT,
+    COURSE_SET_FORMAT, COURSE_DATA_FORMAT,
 
     PKT_CONTROL, PKT_DATA, PKT_HOME_DATA, PKT_HOME_REQ, PKT_HOME_SET,
     PKT_RESET_ERRORS, PKT_TELE_FAST, PKT_TELE_SLOW, PKT_TIME_DATA, PKT_TIME_REQ,
-    PKT_WP_DATA,
+    PKT_WP_DATA, PKT_COURSE_SET, PKT_COURSE_DATA,
 
     HOME_RETRIES, HOME_TIMEOUT_S,
+    COURSE_RETRIES, COURSE_TIMEOUT_S, COURSE_SCALE, COURSE_REQ,
     MODE_NAMES, MODE_RETRIES, MODE_TIMEOUT_S,
     ROUTE_RETRIES, ROUTE_TIMEOUT_S,
 
@@ -47,6 +49,9 @@ class Controller:
         self._home_lon: float = 0.0
         self._home_set: bool = False
 
+        self._target_course: float = 0.0
+        self._course_valid: bool = False
+
         self._upload_status: uploadStatus = uploadStatus.IDLE
         self._upload_current: int = 0 # Number of WP confirmed
         self._upload_total: int = 0
@@ -67,6 +72,7 @@ class Controller:
         self._home_set_event = threading.Event()
         self._home_data_event = threading.Event()
 
+        self._course_data_event = threading.Event()
         
         self._lora_was_online: bool = False
 
@@ -77,6 +83,7 @@ class Controller:
         self._t.register_handler(PKT_DATA, self._handle_ack)
         self._t.register_handler(PKT_HOME_DATA, self._handle_home_data)
         self._t.register_handler(PKT_TIME_REQ, self._handle_time_req)
+        self._t.register_handler(PKT_COURSE_DATA, self._handle_course_data)
 
         self._t.start()
         threading.Thread(target = self._lora_monitor, daemon = True).start()
@@ -103,6 +110,10 @@ class Controller:
     def get_upload_status(self) -> Tuple[uploadStatus, int, int]:
         with self._data_lock:
             return self._upload_status, self._upload_current, self._upload_total
+        
+    def get_course_status(self) -> Tuple[float, bool]:
+        with self._data_lock:
+            return self._target_course, self._course_valid
         
     # Manual control
     @property
@@ -167,6 +178,20 @@ class Controller:
             return
         
         threading.Thread(target = self._request_home_task, daemon = True).start()
+
+    def set_course(self, heading_deg: float) -> None:
+        if not self._t.lora_online:
+            print("[CTRL] LoRa offline")
+            return 
+        
+        threading.Thread(target = self._set_course_task, args = (heading_deg,), daemon = True).start()
+
+    def request_course(self) -> None:
+        if not self._t.lora_online:
+            print("[CTRL] LoRa offline")
+            return
+        
+        threading.Thread(target = self._set_course_task, args = (None,), daemon = True).start()
 
     # Worker tasks
     def _set_mode_task(self, mode: int) -> None:
@@ -286,6 +311,25 @@ class Controller:
         pkt = struct.pack(RESET_ERRORS_FORMAT, PKT_RESET_ERRORS)
         self._t.write(pkt)
 
+    def _set_course_tak(self, heading_deg: Optional[float]) -> None:
+        is_req = heading_deg is None
+        raw = COURSE_REQ if is_req else int(round(heading_deg * COURSE_SCALE)) % (360 * COURSE_SCALE)
+        pkt = struct.pack(COURSE_SET_FORMAT, PKT_COURSE_SET, raw)
+
+        for attempt in range(1, COURSE_RETRIES + 1):
+            if not self._t.lora_online:
+                return
+            self._course_data_event.clear()
+
+            if not self._t.write(pkt):
+                return
+            
+            if self._course_data_event.wait(timeout = COURSE_TIMEOUT_S):
+                return
+            
+            label = "Request" if is_req else "Set"
+            print(f"[CRS] {label} timeout attempt {attempt} / {COURSE_RETRIES}")
+
     # Pakcet handlers
     def _handle_fast_tele(self, payload: bytes) -> None:
         _, lat, lon, heading, mode, target_idx = struct.unpack(FAST_FORMAT, payload)
@@ -377,6 +421,17 @@ class Controller:
         self._t.write(pkt)
         print("[TIME] Sent current time")
 
+    def _handle_course_data(self, payload: bytes) -> None:
+        _, raw_course = struct.unpack(COURSE_DATA_FORMAT, payload)
+
+        self._t.update_lora_t()
+
+        with self._data_lock:
+            self._target_course = raw_course / COURSE_SCALE
+            self._course_valid = True
+
+        self._course_data_event.set()
+
     # LoRa monito
     def _lora_monitor(self) -> None:
         while self._t.running:
@@ -388,6 +443,9 @@ class Controller:
             if not self._lora_was_online and now_online and not h_set:
                 print(f"[HOME] LoRa onlime, requesting home wp")
                 threading.Thread(target = self._request_home_task, daemon = True).start()
+
+            if not self._lora_was_online and now_online:
+                threading.Thread(target = self._set_course_tak, args = (None,), daemon = True).start()
 
             self._lora_was_online = now_online
             time.sleep(0.5)

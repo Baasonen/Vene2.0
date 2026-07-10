@@ -50,9 +50,15 @@ WIFI_HEARTBEAT_SIZE = struct.calcsize(WIFI_HEARTBEAT_FORMAT)
 HOME_FORMAT = "<Bdd"
 HOME_SIZE = struct.calcsize(HOME_FORMAT)
  
-# Unix-time response (uplink, ground → boat)
+# Unix-time response (uplink)
 TIME_DATA_FORMAT = "<BI"
 TIME_DATA_SIZE = struct.calcsize(TIME_DATA_FORMAT)
+
+COURSE_SET_FORMAT = "<Bh"
+COURSE_SET_SIZE = struct.calcsize(COURSE_SET_FORMAT)
+
+COURSE_DATA_FORMAT = "<Bh"
+COURSE_DATA_SIZE = struct.calcsize(COURSE_DATA_FORMAT)
 
 # Packet IDs
 
@@ -69,6 +75,8 @@ PKT_HOME_REQ = 0x0A # U : Request current home wp
 PKT_TIME_REQ = 0x0B # D : Requests unix time
 PKT_TIME_DATA = 0x0C # U : Send unix time
 PKT_DATA = 0x10 # U/D : ACK payload / hb
+PKT_COURSE_SET = 0x0D # U : Set or request (-1) target course
+PKT_COURSE_DATA = 0x0E # D : Currently set target course (for MODE_CRS)
 
 # Modes
 
@@ -76,12 +84,14 @@ MODE_STOP = 0
 MODE_MANUAL = 1
 MODE_AUTO = 2
 MODE_RTH = 3
+MODE_COURSE = 4
 
 MODE_NAMES: Dict[int, str] ={
     MODE_STOP : "STOP",
     MODE_MANUAL : "MANUAL",
     MODE_AUTO : "A/P",
     MODE_RTH : "RTH",
+    MODE_COURSE : "CRS"
 }
 
 # Retry / timeout limits
@@ -97,6 +107,12 @@ HOME_RETRIES = 5
 
 LORA_STALE_S = 5.0 # Time limit for LoRa timeout
 WIFI_STALE_S = 2.0 # Time limit for WiFi timeout
+
+COURSE_SCALE = 1 # 1 for whole deg res, 10 for 1/10 deg resolution
+COURSE_REQ = -1
+
+COURSE_TIMEOUT_S = 2.0
+COURSE_RETRIES = 5
 
 # Upload state
 

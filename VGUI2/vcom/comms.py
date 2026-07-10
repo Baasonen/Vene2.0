@@ -19,12 +19,12 @@ from typing import Callable, Dict, Optional
 from vcom.protocol import (
     ACK_FORMAT, ACK_SIZE,
 
-    FAST_SIZE, HOME_SIZE,
+    FAST_SIZE, HOME_SIZE, COURSE_DATA_SIZE,
     SLOW_SIZE, WIFI_HEARTBEAT_SIZE,
 
     MANUAL_FORMAT,
 
-    PKT_DATA, PKT_HOME_DATA, PKT_MANUAL,
+    PKT_DATA, PKT_HOME_DATA,PKT_COURSE_DATA, PKT_MANUAL,
     PKT_TELE_FAST, PKT_TELE_SLOW,
     PKT_TIME_REQ, PKT_WIFI_HB,
 
@@ -64,6 +64,7 @@ class SerialTransport:
             PKT_DATA: ACK_SIZE,
             PKT_WIFI_HB: WIFI_HEARTBEAT_SIZE,
             PKT_HOME_DATA: HOME_SIZE,
+            PKT_COURSE_DATA : COURSE_DATA_SIZE,
             PKT_TIME_REQ: 1,
         }
 

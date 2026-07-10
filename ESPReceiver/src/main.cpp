@@ -66,9 +66,6 @@ void loop()
         Serial.println(WiFi.localIP());
     }
 
-    // ── Received LoRa packet → forward to PC via Serial ──────────────────────
-    // Handles all boat→GUI packets: PKT_TELE_FAST, PKT_TELE_SLOW, PKT_DATA,
-    // PKT_HOME_DATA (0x09), PKT_TIME_REQ (0x0B) — all forwarded transparently.
     if (receivedFlag)
     {
         receivedFlag = false;
@@ -83,7 +80,6 @@ void loop()
         radio.startReceive();
     }
 
-    // ── WiFi UDP heartbeat → forward to PC via Serial ─────────────────────────
     if (udpReady)
     {
         int packetSize = udp.parsePacket();
@@ -110,6 +106,7 @@ void loop()
         else if (id == PKT_HOME_SET) {expected_len = HOME_SET_SIZE;}
         else if (id == PKT_HOME_REQ) {expected_len = HOME_REQ_SIZE;}
         else if (id == PKT_TIME_DATA) {expected_len = TIME_DATA_SIZE;}
+        else if (id == PKT_COURSE_SET) {expected_len = COURSE_SET_SIZE;}
         else
         {
             Serial.read();   // discard unknown byte
@@ -127,7 +124,8 @@ void loop()
                 id == PKT_RESET_ERRORS ||
                 id == PKT_HOME_SET ||
                 id == PKT_HOME_REQ ||
-                id == PKT_TIME_DATA)
+                id == PKT_TIME_DATA ||
+                id == PKT_COURSE_SET)
             {
                 static uint32_t lastLoRaTx = 0;
 

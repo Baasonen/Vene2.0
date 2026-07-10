@@ -1,8 +1,9 @@
 import tkinter as tk
+from tkinter import ttk
 from typing import Dict, Optional, Tuple
 
 from GUI.base_frame import BaseFrame
-from vcom.protocol import MODE_MANUAL
+from vcom.protocol import MODE_MANUAL, MODE_COURSE
 
 try:
     import pygame
@@ -109,6 +110,37 @@ class ManualControlFrame(BaseFrame):
 
         self._draw_bars()
 
+        # Course
+        self.course_frame = tk.Frame(self.frame, bg = self.theme["panel_bg"], bd = 1,
+                                      relief = "solid", highlightbackground = self.theme["border"])
+        self.course_frame.pack(fill = "x", padx = 8, pady = (0, 8))
+
+        self.course_header_row = tk.Frame(self.course_frame, bg = self.theme["panel_bg"])
+        self.course_header_row.pack(fill = "x", padx = 6, pady = (5, 3))
+
+        self.lbl_course_title = tk.Label(self.course_header_row, text = "COURSE",
+                                          font = ("Segoe UI", 8, "bold"),
+                                          bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+        self.lbl_course_title.pack(side = "left")
+
+        self.course_input_row = tk.Frame(self.course_frame, bg = self.theme["panel_bg"])
+        self.course_input_row.pack(fill = "x", padx = 6, pady = (0, 6))
+
+        self.course_entry = tk.Entry(self.course_input_row, width = 6, font = ("Segoe UI", 12),
+                                      bg = self.theme["canvas_bg"], fg = self.theme["fg"],
+                                      insertbackground = self.theme["fg"], relief = "flat")
+        self.course_entry.pack(side = "left", padx = (0, 6))
+        self.course_entry.bind("<Return>", lambda e: self._on_set_course())
+
+        self.btn_set_course = ttk.Button(self.course_input_row, text = "SET",
+                                  command = self._on_set_course)
+        self.btn_set_course.pack(side = "left", padx = (0, 12))
+
+        self.lbl_course_readout = tk.Label(self.course_input_row, text = "--.-°",
+                                            font = ("Consolas", 12, "bold"),
+                                            bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+        self.lbl_course_readout.pack(side = "left")
+
     def _bind_keys(self) -> None:
         bindings = {
             "<KeyPress-Up>": ("up", True), "<KeyRelease-Up>": ("up", False),
@@ -159,6 +191,20 @@ class ManualControlFrame(BaseFrame):
         rudder = self._step_toward(self._rudder, target_rudder, rudder_step)
         
         return throttle, rudder
+    
+    def _on_set_course(self) -> None:
+        text = self.course_entry.get().strip()
+
+        try:
+            course = float(text)
+        except ValueError:
+            self.course_entry.config(bg = self.theme["red"])
+            self.root.after(400, lambda: self.course_entry.config(bg = self.theme["canvas_bg"]))
+            return
+        
+        course = course % 360
+        self.ctrl.set_course(course)
+        self.course_entry.delete(0, tk.END)
 
     @staticmethod
     def _step_toward(current: float, target: float, max_step: float) -> float:
@@ -264,6 +310,22 @@ class ManualControlFrame(BaseFrame):
         gp_text = (f"{self._gamepad_name}" if self._joystick else "Keyboard Control")
         self.lbl_gamepad.config(text = gp_text)
 
+        course, valid = self.ctrl.get_course_status()
+
+        if valid:
+            text = f"{course:.1f}°"
+
+            if self._current_mode == MODE_COURSE:
+                color = self.theme["green"]
+
+            else:
+                color = self.theme["fg"]
+
+            self.lbl_course_readout.config(text = text, fg = color)
+
+        else:
+            self.lbl_course_readout.config(text = "--.-°", fg = self.theme["fg_dim"])
+
         self.root.after(POLL_MS, self._poll)
 
     def _draw_bars(self) -> None:
@@ -300,26 +362,35 @@ class ManualControlFrame(BaseFrame):
 
         if not hasattr(self, "lbl_title"):
             return
-        
+
         self.frame.config(bg = theme["panel_bg"], highlightbackground = theme["border"])
         self.header_row.config(bg = theme["panel_bg"])
         self.thr_row.config(bg = theme["panel_bg"])
         self.rud_row.config(bg = theme["panel_bg"])
-        
+
         self.lbl_title.config(bg = theme["panel_bg"], fg = theme["fg"])
         self.lbl_gamepad.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
         self.throttle_canvas.config(bg = theme["canvas_bg"])
         self.rudder_canvas.config(bg = theme["canvas_bg"])
         self.lbl_throttle_val.config(bg = theme["panel_bg"], fg = theme["fg"])
         self.lbl_rudder_val.config(bg = theme["panel_bg"], fg = theme["fg"])
- 
+
         for child in self.throttle_canvas.master.winfo_children():
             if isinstance(child, tk.Label):
                 child.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
         for child in self.rudder_canvas.master.winfo_children():
             if isinstance(child, tk.Label):
                 child.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
- 
+
+        self.course_frame.config(bg = theme["panel_bg"], highlightbackground = theme["border"])
+        self.course_header_row.config(bg = theme["panel_bg"])
+        self.course_input_row.config(bg = theme["panel_bg"])
+
+        self.lbl_course_title.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
+        self.course_entry.config(bg = theme["canvas_bg"], fg = theme["fg"], insertbackground = theme["fg"])
+
+        self.lbl_course_readout.config(bg = theme["panel_bg"])
+
         self._draw_bars()
  
     def update(self, telemetry: dict, connection: dict) -> None:

@@ -2,9 +2,23 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Tuple
 import os
+import math
 
 from GUI.base_frame import BaseFrame
 from vcom.protocol import uploadStatus
+
+EARTH_RADIUS_M = 6371000.0
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    p1 =math.radians(lat1)
+    p2 = math.radians(lat2)
+
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
+
+    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
 
 base_path = os.path.join(os.path.dirname(__file__), "..", "..")
 
@@ -31,16 +45,38 @@ class WaypointFrame(BaseFrame):
             self.parent, text = "Waypoints",
             font = ("Segoe UI", 10, "bold"), padx = 10, pady = 8,
             bg = self.theme["panel_bg"], fg = self.theme["fg"])
-        self.frame.pack(fill = "x", pady = (0, 10))
+        self.frame.pack(fill = "both", expand = True, pady = (0, 10))   # CHANGED: both+expand
 
+        # Bottom-anchored controls — pack these FIRST, with side="bottom",
+        # in bottom-to-top visual order, so they always reserve their space
+        # before the list gets whatever's left.
+        self.ctrl_bar = tk.Frame(self.frame, bg = self.theme["panel_bg"])
+        self.ctrl_bar.pack(side = "bottom", fill = "x", pady = (6, 0))
+
+        ttk.Button(self.ctrl_bar, text = "Clear Route", command = self.clear).pack(side = "left", fill = "x", expand = True, padx = (0, 2))
+        ttk.Button(self.ctrl_bar, text = "Upload Route", command = self.upload).pack(side = "right", fill = "x", expand = True, padx = (2, 0))
+
+        self.progress_var = tk.IntVar(value = 0)
+        self.progress_bar = ttk.Progressbar(self.frame, variable = self.progress_var, maximum = 100, mode = "determinate")
+        self.progress_bar.pack(side = "bottom", fill = "x", pady = (8, 2))
+
+        self.status_label = tk.Label(self.frame, text = "No Route", font = ("Segoe UI", 12, "bold"),
+                                     anchor = "w", bg = self.theme["panel_bg"], fg = self._status_color("idle"))
+        self.status_label.pack(side = "bottom", fill = "x")
+
+        self.length_label = tk.Label(self.frame, text = "Length: --", font = ("Segoe UI", 9),
+                              anchor = "w", bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+        self.length_label.pack(side = "bottom", fill = "x")
+
+        # List area — packed LAST, so it claims whatever cavity remains
         self.list_container = tk.Frame(self.frame, bg = self.theme["panel_bg"])
-        self.list_container.pack(fill = "x", pady = 2)
+        self.list_container.pack(side = "top", fill = "both", expand = True, pady = 2)
 
-        self.listbox = tk.Listbox(self.list_container, height = 20, font = ("Consolas", 9),
+        self.listbox = tk.Listbox(self.list_container, font = ("Consolas", 9),   # height=20 removed
                                   borderwidth = 0, highlightthickness = 0, selectmode = "single",
                                   bg = self.theme["canvas_bg"], fg = self.theme["fg"],
                                   selectbackground = self.theme["accent"])
-        self.listbox.pack(side = "left", fill = "x", expand = True)
+        self.listbox.pack(side = "left", fill = "both", expand = True)          # fill: x -> both
 
         scrollbar = ttk.Scrollbar(self.list_container, orient = "vertical", command = self.listbox.yview)
         scrollbar.pack(side = "left", fill = "y")
@@ -51,20 +87,6 @@ class WaypointFrame(BaseFrame):
 
         ttk.Button(self.move_bar, text="↑", width=3, command=self._move_up).pack(pady=(0, 2))
         ttk.Button(self.move_bar, text="↓", width=3, command=self._move_down).pack()
-
-        self.status_label = tk.Label(self.frame, text = "No Route", font = ("Segoe UI", 12, "bold"),
-                                     anchor = "w", bg = self.theme["panel_bg"], fg = self._status_color("idle"))
-        self.status_label.pack(fill = "x")
-
-        self.progress_var = tk.IntVar(value = 0)
-        self.progress_bar = ttk.Progressbar(self.frame, variable = self.progress_var, maximum = 100, mode = "determinate")
-        self.progress_bar.pack(fill = "x", pady = (8, 2))
-
-        self.ctrl_bar = tk.Frame(self.frame, bg = self.theme["panel_bg"])
-        self.ctrl_bar.pack(fill  ="x", pady = (6, 0))
-
-        ttk.Button(self.ctrl_bar, text = "Clear Route", command = self.clear).pack(side = "left", fill = "x", expand = True, padx = (0, 2))
-        ttk.Button(self.ctrl_bar, text = "Upload Route", command = self.upload).pack(side = "right", fill = "x", expand = True, padx = (2, 0))
 
     def add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoints.append(coords)
@@ -133,6 +155,8 @@ class WaypointFrame(BaseFrame):
         if len(self.waypoints) > 1:
             self._path = self.map_widget.set_path(self.waypoints, color = self.theme["accent"], width = 3)
 
+        self._update_lenght()
+
     def update(self, telemetry: dict, connection: dict) -> None:
         super().update(telemetry, connection)
 
@@ -143,6 +167,21 @@ class WaypointFrame(BaseFrame):
 
         self._prev_status = status
         self._refresh_progress(status, current, total)
+
+    def _update_lenght(self) -> None:
+        total_m = 0.0
+
+        for (lat1, lon1), (lat2, lon2) in zip(self.waypoints, self.waypoints[1:]):
+            total_m += _haversine_m(lat1, lon1, lat2, lon2)
+
+        if not self.waypoints:
+            self.length_label.config(text = "Length: --")
+        
+        elif total_m < 1000:
+            self.length_label.config(text = f"Length: {total_m:.0f} m")
+
+        else:
+            self.length_label.config(text = f"Length: {total_m / 1000:.2f} km")
 
     def _refresh_progress(self, status: uploadStatus, current: int, total: int) -> None:
         if status == uploadStatus.UPLOADING:
@@ -188,6 +227,7 @@ class WaypointFrame(BaseFrame):
         self.move_bar.config(bg = theme["panel_bg"])
         self.ctrl_bar.config(bg = theme["panel_bg"])
         self.status_label.config(bg = theme["panel_bg"])
+        self.length_label.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
 
         self.listbox.config(bg = theme["canvas_bg"], fg = theme["fg"], selectbackground = theme["accent"])
         if self._path is not None:

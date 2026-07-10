@@ -46,3 +46,9 @@
 
 #define PKT_TIME_REQ 0x0B
 #define TIME_REQ_SIZE 1
+
+#define PKT_COURSE_SET 0x0D
+#define COURSE_SET_SIZE 3
+
+#define PKT_COURSE_DATA 0x0E
+#define COURSE_DATA_SIZE 3

@@ -10,7 +10,7 @@ class TelemetryFrame(BaseFrame):
         ("GPS", "GPS HDOP", "—"),
         ("MAG", "Mag Accuracy", "—"),
         ("NAV", "Target WP (idx)", "—"),
-        ("BAT", "Battery", "—%"),
+        ("BAT", "Battery", "—V"),
         ("SIG", "LoRa RSSI", "— dBm"),
         ("HOME", "Home WP", "—, —"),
     ]
@@ -88,7 +88,7 @@ class TelemetryFrame(BaseFrame):
             mag.configure(text = "3/3", fg = self.theme["green"])
 
         bat, _, _ = self.widgets["BAT"]
-        bat.config(text = f"{telemetry['battery']}%",
+        bat.config(text = f"{telemetry['battery']} V",
                    fg=self.theme["green"] if telemetry["battery"] > 30 else self.theme["red"])
 
         gps, _, _ = self.widgets["GPS"]

@@ -26,14 +26,10 @@ int GPSInit()
     uint32_t start = millis(); // Wait 3s and check if communication
     while (millis() - start < 3000)
     {
-        if (gpsSerial.available() > 10) 
-        {
-            setError(ERR_GPS_INIT);
-
-            return 1;
-        }
+        if (gpsSerial.available() > 10) {return 1;}
     }
 
+    setError(ERR_GPS_INIT);
     return 0;
 }
 
@@ -181,7 +177,7 @@ void ubxInitAid(Stream &port, double lat, double lon, float altM, uint32_t unix)
     uint32_t posAcc = 500000; // 5km in cm
     uint16_t tmCfg = 0; 
     int32_t towNs = 0;
-    uint32_t towAccMs = 2000; // 15s
+    uint32_t towAccMs = 2000; // 2s
     uint32_t towAccNs = 0;
     int32_t clkD = 0;
     uint32_t clkDAcc = 0;
