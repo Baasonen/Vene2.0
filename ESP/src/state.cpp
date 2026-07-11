@@ -6,7 +6,14 @@ uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
 {
     uint8_t mode = status.mode;
 
-    if (status.loraTimeout && (millis() - status.commTimeoutTriggerTime > 30000)) {return 3;}
+    if (status.loraTimeout && (millis() - status.commTimeoutTriggerTime > 30000))
+    {
+        bool navAvail = status.homeSet &&
+                        !hasError(ERR_GPS_FAIL) && !hasError(ERR_GPS_ACC_LOW) &&
+                        !hasError(ERR_MAG_FAIL) && !hasError(ERR_MAG_ACC_LOW);
+
+        return navAvail ? 3 : 0;
+    }
 
     //TODO: Check correct logic
 
@@ -32,6 +39,7 @@ uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
 
         case 4:
             if (hasError(ERR_MAG_ACC_LOW) || hasError(ERR_MAG_FAIL)) {return 0;}
+            if (hasError(ERR_LORA_TIMEOUT)) {return 0;}
             return 4;
 
         default:

@@ -18,11 +18,10 @@
 #include "wifiComm.h"
 #include "navigation.h"
 #include "errors.h"
+#include "autopilot.h"
 
 #define WDT_TIMEOUT 5
 
-#define AP_THROTTLE 50
-#define WP_TRESHOLD 3
 #define HOME_TRESHOLD 5
 
 Preferences prefs;
@@ -94,17 +93,7 @@ void controlTask(void* pv)
                 break;
  
             case 2: // AUTOPILOT
-                if (status.targetWaypoint == 0) {status.targetWaypoint = 1;}
-
-                if (distanceToPoint(sensors.gps.lat, sensors.gps.lon, route.waypoints[status.targetWaypoint].lat, route.waypoints[status.targetWaypoint].lon) <= WP_TRESHOLD)
-                {
-                    status.targetWaypoint++;
-
-                    if (status.targetWaypoint > route.length) {status.mode = 3;}
-                }
-
-                setThrottle(AP_THROTTLE);
-                steerTo(headingToPoint(sensors.gps.lat, sensors.gps.lon, route.waypoints[status.targetWaypoint].lat, route.waypoints[status.targetWaypoint].lon));
+                if (runAutopilot(status, sensors, route)) {mode = 0;}
 
                 break;
  
@@ -126,6 +115,8 @@ void controlTask(void* pv)
             case 4: // COURSE HOLD
                 steerTo(status.targetCourse);
                 setThrottle(0);
+
+                break;
  
             default:
                 turnRudder(0);
