@@ -26,7 +26,7 @@ from vcom.protocol import (
 
     PKT_DATA, PKT_HOME_DATA,PKT_COURSE_DATA, PKT_MANUAL,
     PKT_TELE_FAST, PKT_TELE_SLOW,
-    PKT_TIME_REQ, PKT_WIFI_HB,
+    PKT_TIME_REQ, PKT_WIFI_HB, PKT_UPLOAD_BEGIN,
 
     LORA_STALE_S, WIFI_STALE_S,
 
@@ -111,6 +111,8 @@ class SerialTransport:
         
     def set_upload_status(self, status: uploadStatus) -> None:
         with self._upload_lock:
+            if status == uploadStatus.UPLOADING:
+                self.ser.write(struct.pack("<B", PKT_UPLOAD_BEGIN))
             self._upload_status = status
 
     # Record new LoRa time

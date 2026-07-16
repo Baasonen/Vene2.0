@@ -298,6 +298,11 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
 
         beginTransmit((uint8_t*)&response, sizeof(response));
     }
+
+    else if ((packetID == PKT_UPLOAD_BEGIN) && (len == 1))
+    {
+        lastRoutePacketTime = millis();
+    }
 }
 
 void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)

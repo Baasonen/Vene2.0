@@ -34,6 +34,7 @@
 #define PKT_TIME_DATA 0x0C
 #define PKT_COURSE_SET 0x0D
 #define PKT_COURSE_DATA 0x0E
+#define PKT_UPLOAD_BEGIN 0x0F
 
 #pragma pack(push, 1)
 

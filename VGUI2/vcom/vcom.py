@@ -311,7 +311,7 @@ class Controller:
         pkt = struct.pack(RESET_ERRORS_FORMAT, PKT_RESET_ERRORS)
         self._t.write(pkt)
 
-    def _set_course_tak(self, heading_deg: Optional[float]) -> None:
+    def _set_course_task(self, heading_deg: Optional[float]) -> None:
         is_req = heading_deg is None
         raw = COURSE_REQ if is_req else int(round(heading_deg * COURSE_SCALE)) % (360 * COURSE_SCALE)
         pkt = struct.pack(COURSE_SET_FORMAT, PKT_COURSE_SET, raw)
@@ -445,7 +445,7 @@ class Controller:
                 threading.Thread(target = self._request_home_task, daemon = True).start()
 
             if not self._lora_was_online and now_online:
-                threading.Thread(target = self._set_course_tak, args = (None,), daemon = True).start()
+                threading.Thread(target = self._set_course_task, args = (None,), daemon = True).start()
 
             self._lora_was_online = now_online
             time.sleep(0.5)

@@ -77,6 +77,7 @@ PKT_TIME_DATA = 0x0C # U : Send unix time
 PKT_DATA = 0x10 # U/D : ACK payload / hb
 PKT_COURSE_SET = 0x0D # U : Set or request (-1) target course
 PKT_COURSE_DATA = 0x0E # D : Currently set target course (for MODE_CRS)
+PKT_UPLOAD_BEGIN = 0x0F
 
 # Modes
 

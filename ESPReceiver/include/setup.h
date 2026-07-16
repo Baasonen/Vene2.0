@@ -52,3 +52,6 @@
 
 #define PKT_COURSE_DATA 0x0E
 #define COURSE_DATA_SIZE 3
+
+#define PKT_UPLOAD_BEGIN 0x0F
+#define UPLOAD_BEGIN_SIZE 1
