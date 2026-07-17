@@ -1,6 +1,7 @@
 #include "lora.h"
 
 #include "errors.h"
+#include "packet_handlers.h"
 
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
 static int8_t lastRSSI = 0;
@@ -100,208 +101,69 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
 
     uint8_t packetID = rxBuffer[0];
 
-    // Route Packet
-    if ((packetID == PKT_WP_DATA) && (len == sizeof(routePacket)))
+    switch (packetID)
     {
-        lastPacketReceivedTime = millis();
-        lastRoutePacketTime = millis();
-
-        routePacket* rp = (routePacket*)rxBuffer;
-        Serial.printf("[LORA] Received Route Packet %i\n", rp->order);
-
-        if (rp->order == 0)
-        {
-            tempRoute.id = rp->id;
-            tempRoute.length = rp->ammnt;
-            receivedCount = 0;
-            memset(wpReceived, 0, 50 * sizeof(bool));
-        }
-
-        if ((rp->id == tempRoute.id) && (rp->order < 50))
-        {
-            dataPacket ack = {PKT_DATA, rp->id, rp->order};
-            beginTransmit((uint8_t*)&ack, sizeof(ack));
-
-            if (!wpReceived[rp->order])
+        case PKT_WP_DATA:
+            if (len == sizeof(routePacket)) 
             {
-                tempRoute.waypoints[rp->order + 1].lat = rp->lat;
-                tempRoute.waypoints[rp->order + 1].lon = rp->lon;
-                wpReceived[rp->order] = true;
-                receivedCount++;
-
-                if (receivedCount == tempRoute.length)
-                {
-                    tempRoute.newRouteAvailable = true;
-
-                    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
-                    {
-                        globalState.status.loraTimeout = false;
-                        globalState.status.routeReady = true;
-
-                        tempRoute.waypoints[0].lat = globalState.status.home.lat;
-                        tempRoute.waypoints[0].lon = globalState.status.home.lon;
-                        globalState.route = tempRoute;
-
-                        xSemaphoreGive(stateMutex);
-                    }
-                }
+                handleRoutePacket(rxBuffer, lastPacketReceivedTime, lastRoutePacketTime, tempRoute, wpReceived, receivedCount);
             }
-        }
-    }
+            break;
 
-    else if ((packetID == PKT_CONTROL) && (len == sizeof(controlPacket)))
-    {
-        lastPacketReceivedTime = millis();
-
-        controlPacket* cp = (controlPacket*)rxBuffer;
-
-        dataPacket ack = {PKT_DATA, 255, cp->mode};
-        beginTransmit((uint8_t*)&ack, sizeof(ack));
-
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
-        {
-            globalState.status.mode = cp->mode;
-            globalState.status.loraTimeout = false;
-            xSemaphoreGive(stateMutex);
-        }
-    }
-
-    else if ((packetID == PKT_DATA) && (len == sizeof(dataPacket)))
-    {
-        dataPacket* hb = (dataPacket*)rxBuffer;
-        if (hb->id == 254) 
-        {
-            lastPacketReceivedTime = millis();
-
-            if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)) == pdTRUE)
+        case PKT_CONTROL:
+            if (len == sizeof(controlPacket)) 
             {
-                globalState.status.loraTimeout = false;
-                xSemaphoreGive(stateMutex);
+                handleControlPacket(rxBuffer, lastPacketReceivedTime);
             }
-        }
-    }
+            break;
 
-    else if ((packetID == PKT_RESET_ERRORS) && (len == sizeof(resetErrorsPacket)))
-    {
-        clearAllErrors();
-
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
-        {
-            globalState.status.loraTimeout = false;
-            xSemaphoreGive(stateMutex);
-        }
-
-        dataPacket ack = {PKT_DATA, 254, PKT_RESET_ERRORS};
-        beginTransmit((uint8_t*)&ack, sizeof(ack));
-    }
-
-    else if ((packetID == PKT_HOME_SET) && (len == sizeof(homeSetPacket)))
-    {
-        lastPacketReceivedTime = millis();
-        homeSetPacket* hp = (homeSetPacket*)rxBuffer;
-
-        if (hp->lat != 0.0 || hp->lon != 0.0)
-        {
-            if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        case PKT_DATA:
+            if (len == sizeof(dataPacket)) 
             {
-                globalState.status.home.lat = hp->lat;
-                globalState.status.home.lon = hp->lon;
-                globalState.status.homeSet = true;
-                globalState.status.homeNeedsSave = true;
-                globalState.status.loraTimeout = false;
-                xSemaphoreGive(stateMutex);
+                handleDataPacket(rxBuffer, lastPacketReceivedTime);
             }
-            Serial.printf("[LORA] Home set: %.6f, %.6f\n", hp->lat, hp->lon);
-        }
+            break;
 
-        dataPacket ack = {PKT_DATA, PKT_HOME_SET, 0x01};
-        beginTransmit((uint8_t*)&ack, sizeof(ack));
-    }
-
-    else if ((packetID == PKT_HOME_REQ) && (len == 1))
-    {
-        lastPacketReceivedTime = millis();
-
-        homeDataPacket resp = {};
-        resp.packetID = PKT_HOME_DATA;
-
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
-        {
-            resp.lat = globalState.status.homeSet ? globalState.status.home.lat : 0.0;
-            resp.lon = globalState.status.homeSet ? globalState.status.home.lon : 0.0;
-            globalState.status.loraTimeout = false;
-            xSemaphoreGive(stateMutex);
-        }
-
-        Serial.printf("[LORA] Home requested, responding: %.6f, %.6f\n", resp.lat, resp.lon);
-        beginTransmit((uint8_t*)&resp, sizeof(resp));
-    }
-
-    else if ((packetID == PKT_TIME_DATA) && (len == sizeof(timeDataPacket)))
-    {
-        lastPacketReceivedTime = millis();
-        timeDataPacket* tp = (timeDataPacket*)rxBuffer;
-
-        bool homeSetLocal = false;
-        double homeLatLocal = 0.0;
-        double homeLonLocal = 0.0;
-
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
-        {
-            if (!globalState.status.timeSet)
+        case PKT_RESET_ERRORS:
+            if (len == sizeof(resetErrorsPacket)) 
             {
-                globalState.status.unixTime = tp->unixTime;
-                globalState.status.timeSet = true;
-
-                Serial.printf("[LORA] Unix time received: %lu\n", (unsigned long)tp->unixTime);
-
-                if (globalState.status.homeSet)
-                {
-                    homeSetLocal = true;
-
-                    homeLatLocal = globalState.status.home.lat;
-                    homeLonLocal = globalState.status.home.lon;
-                }
+                handleResetErrorsPacket();
             }
+            break;
 
-            globalState.status.loraTimeout = false;
-            xSemaphoreGive(stateMutex);
-        }
-
-        if (homeSetLocal)
-        {
-            gpsInitAid(homeLatLocal, homeLonLocal, 0.0, tp->unixTime);
-
-            Serial.println("[GPS] UBX aiding data injected");
-        }
-    }
-
-    else if ((packetID == PKT_COURSE_SET) && (len == sizeof(courseSetPacket)))
-    {
-        lastPacketReceivedTime = millis();
-        courseSetPacket* cp = (courseSetPacket*)rxBuffer;
-
-        courseDataPacket response = {};
-        response.packetID = PKT_COURSE_DATA;
-
-        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
-        {
-            if (cp->course >= 0.0 && cp->course < 360.0f)
+        case PKT_HOME_SET:
+            if (len == sizeof(homeSetPacket)) 
             {
-                globalState.status.targetCourse = cp->course;
+                handleHomeSetPacket(rxBuffer, lastPacketReceivedTime);
             }
+            break;
 
-            response.course = globalState.status.targetCourse;
-            globalState.status.loraTimeout = false;
-            xSemaphoreGive(stateMutex);
-        }
+        case PKT_HOME_REQ:
+            if (len == 1) 
+            {
+                handleHomeReqPacket(lastPacketReceivedTime);
+            }
+            break;
 
-        beginTransmit((uint8_t*)&response, sizeof(response));
-    }
+        case PKT_TIME_DATA:
+            if (len == sizeof(timeDataPacket)) 
+            {
+                handleTimeDataPacket(rxBuffer, lastPacketReceivedTime);
+            }
+            break;
 
-    else if ((packetID == PKT_UPLOAD_BEGIN) && (len == 1))
-    {
-        lastRoutePacketTime = millis();
+        case PKT_COURSE_SET:
+            if (len == sizeof(courseSetPacket)) 
+            {
+                handleCourseSetPacket(rxBuffer, lastPacketReceivedTime);
+            }
+            break;
+
+        case PKT_UPLOAD_BEGIN:
+            if (len == 1) {
+                lastRoutePacketTime = millis();
+            }
+            break;
     }
 }
 
@@ -325,8 +187,6 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
-            fastPkt.lat = globalState.sensors.gps.lat;
-            fastPkt.lon = globalState.sensors.gps.lon;
             fastPkt.heading = globalState.sensors.mag.heading;
             fastPkt.targetIdx = globalState.status.targetWaypoint;
             fastPkt.mode = globalState.status.mode;
@@ -351,6 +211,8 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
             slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
             slowPkt.errorCode = globalState.status.errorCode;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
+            slowPkt.lat = globalState.sensors.gps.lat;
+            slowPkt.lon = globalState.sensors.gps.lon;
 
             xSemaphoreGive(stateMutex);
 

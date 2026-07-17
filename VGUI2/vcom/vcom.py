@@ -332,7 +332,7 @@ class Controller:
 
     # Pakcet handlers
     def _handle_fast_tele(self, payload: bytes) -> None:
-        _, lat, lon, heading, mode, target_idx = struct.unpack(FAST_FORMAT, payload)
+        _, heading, mode, target_idx = struct.unpack(FAST_FORMAT, payload)
 
         self._t.update_lora_t()
 
@@ -340,8 +340,6 @@ class Controller:
             old_mode = self._telemetry_data["mode"]
 
             self._telemetry_data.update({
-                "lat": lat,
-                "lon": lon,
                 "heading": heading,
                 "mode": mode,
                 "target_idx": target_idx,
@@ -355,7 +353,7 @@ class Controller:
             self.on_mode_change(mode)
 
     def _handle_slow_tele(self, payload: bytes) -> None:
-        _, battery, hdop_raw, signal_raw, new_error = struct.unpack(SLOW_FORMAT, payload)
+        _, battery, hdop_raw, signal_raw, new_error, lat, lon = struct.unpack(SLOW_FORMAT, payload)
 
         self._t.update_lora_t()
 
@@ -367,6 +365,8 @@ class Controller:
                 "hdop": hdop_raw / 10.0,
                 "signal": signal_raw - 128,
                 "error": new_error,
+                "lat" : lat,
+                "lon" : lon,
             })
 
         if new_error != old_error and self.on_error_change:

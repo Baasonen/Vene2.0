@@ -41,8 +41,6 @@
 struct telemetryFastPacket
 {
     uint8_t packetID; // 0x02
-    double lat;
-    double lon;
     float heading;
     uint8_t mode;
     uint8_t targetIdx; 
@@ -55,6 +53,8 @@ struct telemetrySlowPacket
     uint8_t gps;
     uint8_t signalStrength;
     uint32_t errorCode;
+    double lat;
+    double lon;
 };
 
 struct routePacket
@@ -122,4 +122,7 @@ struct courseDataPacket
 extern SemaphoreHandle_t stateMutex;
 
 int LoRaInit();
+
 void commsTask(void* pvParameters);
+
+void beginTransmit(uint8_t* data, size_t len);

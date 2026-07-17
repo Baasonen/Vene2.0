@@ -19,11 +19,11 @@ from typing import Dict, Tuple
 # Struct formats
 
 # Fast telemetry (downlink, ~5 Hz): position, heading, mode, target waypoint
-FAST_FORMAT = "<BddfBB"
+FAST_FORMAT = "<BfBB"
 FAST_SIZE = struct.calcsize(FAST_FORMAT)
  
 # Slow telemetry (downlink, ~1 Hz): battery, HDOP, RSSI, error bitmask
-SLOW_FORMAT = "<BBBBI"
+SLOW_FORMAT = "<BBBBIdd"
 SLOW_SIZE = struct.calcsize(SLOW_FORMAT)
  
 # Waypoint data (uplink): route_id, lat, lon, waypoint order, total count
