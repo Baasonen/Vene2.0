@@ -64,6 +64,8 @@ void handleControlPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
         
         xSemaphoreGive(stateMutex);
     }
+
+    beginTransmit((uint8_t*)&ack, sizeof(ack));
 }
 
 void handleDataPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)

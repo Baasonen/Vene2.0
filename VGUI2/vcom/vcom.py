@@ -1,5 +1,5 @@
 
-VERSION = 2.1
+VERSION = 2.2
 
 import struct
 import threading

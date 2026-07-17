@@ -103,7 +103,7 @@ MODE_RETRIES = 5
 ROUTE_TIMEOUT_S = 2.0 # Seconds to wait for each wp ACK
 ROUTE_RETRIES = 5
 
-HOME_TIMEOUT_S = 2.0 # Seconds to wait for a home set or home data ACK
+HOME_TIMEOUT_S = 3.5 # Seconds to wait for a home set or home data ACK
 HOME_RETRIES = 5
 
 LORA_STALE_S = 5.0 # Time limit for LoRa timeout

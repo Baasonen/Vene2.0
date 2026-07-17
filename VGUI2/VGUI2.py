@@ -44,6 +44,7 @@ class VGUI:
         self.ctrl.on_home_received = self._on_home_received
 
         self._refresh()
+        self._update_clock()
 
 
     def _build_layout(self) -> None:
@@ -54,6 +55,10 @@ class VGUI:
         self.lbl_title = tk.Label(self.header, text = f"VGUI {VERSION}", font = ("Segoe UI", 12, "bold"),
                  bg = self.theme["panel_bg"], fg = self.theme["fg"])
         self.lbl_title.pack(side = "left", padx = 15)
+
+        self.lbl_clock = tk.Label(self.header, text = "", font = ("Segoe UI", 12),
+                                  bg = self.theme["panel_bg"], fg = self.theme["fg"])
+        self.lbl_clock.pack(side = "left", padx = (0, 15))
         
         self.theme_var = tk.StringVar(value = self.current_theme_name)
         self.theme_combo = ttk.Combobox(self.header, textvariable = self.theme_var,
@@ -113,6 +118,10 @@ class VGUI:
 
         self.root.after(100, self._refresh)
 
+    def _update_clock(self) -> None:
+        self.lbl_clock.config(text = time.strftime("%H:%M:%S"))
+        self.root.after(1000, self._update_clock)
+
     def _on_theme_select(self, event = None) -> None:
         selected = self.theme_var.get()
 
@@ -126,6 +135,7 @@ class VGUI:
         self.root.configure(bg = self.theme["bg"])
         self.header.config(bg = self.theme["panel_bg"], highlightbackground = self.theme["border"])
         self.lbl_title.config(bg = self.theme["panel_bg"], fg = self.theme["fg"])
+        self.lbl_clock.config(bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
         self.main.config(bg = self.theme["bg"])
         self.col_left.config(bg = self.theme["bg"])
         self.col_mid.config(bg = self.theme["bg"])

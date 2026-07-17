@@ -3,11 +3,53 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from typing import Set
+import re
 
 from GUI.base_frame import BaseFrame
 from GUI.print_redirect import PrintRedirector
 
 IGNORED_LOG_NAMES = {"HDG_A1", "HDG_A2", "HDG_A3"}
+
+_TAG_RE = re.compile(r"^\[(\w+)\]\s?(.*)$")
+
+class _Timestamper:
+    def __init__(self, target, label: str):
+        self._target = target
+        self._default_label = label.upper()
+        self._at_line_start = True
+
+    def write(self, s: str) -> None:
+        if not s:
+            return
+
+        out = []
+        for i, part in enumerate(s.split("\n")):
+            if i > 0:
+                out.append("\n\n") 
+                self._at_line_start = True
+
+            if part:
+                if self._at_line_start:
+                    match = _TAG_RE.match(part)
+
+                    if match:
+                        label, part = match.group(1).upper(), match.group(2)
+                    else:
+                        label = self._default_label
+
+                    out.append(f"[{time.strftime('%H:%M:%S')}] [{label}]\n")
+                    self._at_line_start = False
+
+                out.append(part)
+
+        self._target.write("".join(out))
+
+    def flush(self) -> None:
+        if hasattr(self._target, "flush"):
+            self._target.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._target, name)
 
 class ErrorFrame(BaseFrame):
     def __init__(self, parent, theme, ctrl):
@@ -118,8 +160,8 @@ class ErrorFrame(BaseFrame):
         self._orig_stdout = sys.stdout
         self._orig_stderr = sys.stderr
 
-        sys.stdout = PrintRedirector(self.log, tag = "stdout", echo_to = self._orig_stdout)
-        sys.stderr = PrintRedirector(self.log, tag = "stderr", echo_to = self._orig_stderr)
+        sys.stdout = _Timestamper(PrintRedirector(self.log, tag = "stdout", echo_to = self._orig_stdout), label = "STDOUT")
+        sys.stderr = _Timestamper(PrintRedirector(self.log, tag = "stderr", echo_to = self._orig_stderr), label = "STDERR")
 
     def apply_theme(self, theme: dict) -> None:
         super().apply_theme(theme)

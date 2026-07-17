@@ -28,17 +28,17 @@ THEMES = {
         "dark_map": False
     },
     "red": {
-        "bg": "#080808",         
-        "panel_bg": "#0f0f0f", 
-        "border": "#1e1e1e",     
-        "fg": "#cc2200",      
-        "fg_dim": "#5a1500",    
-        "accent": "#aa1100",    
-        "green": "#993300",      
-        "red": "#ff2200",     
-        "orange": "#882200",      
-        "canvas_bg": "#050505",
-        "checkbox": "#1e1e1e",   
+        "bg": "#000000",         
+        "panel_bg": "#000000", 
+        "border": "#4B0000",     
+        "fg": "#b90000",      
+        "fg_dim": "#b90000",    
+        "accent": "#b90000",    
+        "green": "#b90000",      
+        "red": "#b90000",     
+        "orange": "#b90000",      
+        "canvas_bg": "#000000",
+        "checkbox": "#000000",   
         "dark_map": True
     }
 }
