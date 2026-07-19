@@ -270,7 +270,7 @@ void commsTask(void* pvParameters)
         {
             completeTransmit();
         }
-        else if (loraDir == LORA_DIR_TX && txStartTime != 0 && (millis() - txStartTime) > 500)
+        else if (loraDir == LORA_DIR_TX && txStartTime != 0 && (millis() - txStartTime) > LORA_TX_TIMEOUT_MS)
         {
             Serial.println("[LORA] TX timeout, forcing RX");
             resetLoRa();

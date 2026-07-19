@@ -9,11 +9,11 @@
 #define LORA_CS 17
 #define LORA_DIO0 26
 
-#define LORA_FREQ 868.5
+#define LORA_FREQ 869.5
 #define LORA_BANDWIDTH 125.0
-#define LORA_SF 9
-#define LORA_CODING_RATE 7
-#define LORA_POWER 15
+#define LORA_SF 10
+#define LORA_CODING_RATE 5
+#define LORA_POWER 20
 
 #define PKT_WP_DATA 0x01
 #define ROUTE_PACKET_SIZE 20

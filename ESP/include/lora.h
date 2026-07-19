@@ -14,11 +14,13 @@
 #define LORA_CS 15
 #define LORA_DIO0 12
 
-#define LORA_FREQ 868.5
+#define LORA_FREQ 869.5
 #define LORA_BANDWIDTH 125.0
-#define LORA_SF 9
-#define LORA_CODING_RATE 7
-#define LORA_POWER 15
+#define LORA_SF 10
+#define LORA_CODING_RATE 5
+#define LORA_POWER 20
+
+#define LORA_TX_TIMEOUT_MS 750
 
 #define PKT_WP_DATA 0x01
 #define PKT_TELE_FAST 0x02
