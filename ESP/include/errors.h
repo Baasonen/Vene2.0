@@ -6,6 +6,10 @@
 #include "errors_generated.h"
 #include "state.h"
 
+#define WI_SENSOR_VCC 23
+#define WI_SENSOR_S 34
+#define WI_SETTLE_US 2000
+
 // Live errors: always calculated in error task
 // Latched errors: set by individual faults, require manual clearing
 
