@@ -59,6 +59,8 @@ void controlTask(void* pv)
     SystemStatus status = {};
     ManualControls manual = {};
     Route route  = {};
+
+    uint8_t lastMode = 255;
  
     for (;;)
     {
@@ -79,6 +81,10 @@ void controlTask(void* pv)
         }
  
         uint8_t mode = validateMode(status, sensors);
+
+        if (mode != lastMode) {resetSteering();} // Reset steering PI controller on mode change 
+
+        bool justArmed = (mode != 0) && !status.ctrlArmed;
  
         switch (mode)
         {
@@ -129,8 +135,13 @@ void controlTask(void* pv)
             globalState.sensors = sensors;
             globalState.status.mode = mode;
             globalState.status.targetWaypoint = status.targetWaypoint;
+
+            if (justArmed) {globalState.status.ctrlArmed = true;}
+            
             xSemaphoreGive(stateMutex);
         }
+
+        lastMode = mode;
     }
 }
 

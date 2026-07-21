@@ -34,6 +34,7 @@ typedef struct
     wp home;
     bool homeSet;
     bool homeNeedsSave;
+    bool ctrlArmed;
 
     bool routeReady;
 

@@ -11,7 +11,7 @@
 
 #define LORA_FREQ 869.5
 #define LORA_BANDWIDTH 125.0
-#define LORA_SF 10
+#define LORA_SF 9
 #define LORA_CODING_RATE 5
 #define LORA_POWER 20
 

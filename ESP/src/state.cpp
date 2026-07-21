@@ -6,7 +6,7 @@ uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
 {
     uint8_t mode = status.mode;
 
-    if (status.loraTimeout && (millis() - status.commTimeoutTriggerTime > 30000))
+    if (status.ctrlArmed && status.loraTimeout && (millis() - status.commTimeoutTriggerTime > 30000))
     {
         bool navAvail = status.homeSet &&
                         !hasError(ERR_GPS_FAIL) && !hasError(ERR_GPS_ACC_LOW) &&

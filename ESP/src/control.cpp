@@ -3,6 +3,15 @@
 static Servo rudder;
 static Servo motor;
 
+static float iError = 0.0f;
+static uint32_t lastSteerTime = 0;
+
+void resetSteering()
+{
+    iError = 0.0f;
+    lastSteerTime = 0;
+}
+
 void controlInit()
 {
     rudder.attach(RUDDER_PIN);
@@ -30,10 +39,12 @@ void setThrottle(int8_t throttle)
 
 void steerTo(float targetHeading)
 {
-    const float Kp = 2.0;
-    const float deadzone = 2.0;
+    const float Kp = RUDDER_KP;
+    const float Ki = RUDDER_KI;
+    const float deadzone = 2.0f;
+    const float integralLimit = RUDDER_I_LIM;
 
-    float currentHeading = 0.0;
+    float currentHeading = 0.0f;
 
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
     {
@@ -42,16 +53,27 @@ void steerTo(float targetHeading)
     }
 
     float error = targetHeading - currentHeading;
+    if (error > 180.0f) {error -= 360.0f;}
+    if (error < -180.0f) {error += 360.0f;}
 
-    if (error > 180.0) {error -= 360.0;}
-    if (error < -180.0) {error += 360.0;}
+    uint32_t now = millis();
+    float dt = (lastSteerTime == 0) ? 0.05f : (now - lastSteerTime) / 1000.0f;
+    lastSteerTime = now;
 
     if (abs(error) < deadzone) {return;}
 
-    int8_t angle = (int8_t) (error * Kp);
+    float rawAngle = (error * Kp) + (iError * Ki);
+    bool saturated = (rawAngle > RUDDER_U_LIM) || (rawAngle < RUDDER_L_LIM);
 
-    if (angle > RUDDER_U_LIM) {angle = RUDDER_U_LIM;}
-    if (angle < RUDDER_L_LIM) {angle = RUDDER_L_LIM;}
+    if (!saturated)
+    {
+        iError += error * dt;
+        if (iError > integralLimit) {iError = integralLimit;}
+        if (iError < -integralLimit) {iError = -integralLimit;}
+    }
 
-    turnRudder(angle);
+    if (rawAngle > RUDDER_U_LIM) {rawAngle = RUDDER_U_LIM;}
+    if (rawAngle < RUDDER_L_LIM) {rawAngle = RUDDER_L_LIM;}
+
+    turnRudder((int8_t)rawAngle);
 }
