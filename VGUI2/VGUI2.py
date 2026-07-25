@@ -1,4 +1,4 @@
-VERSION = 2.1
+VERSION = 2.2
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext
