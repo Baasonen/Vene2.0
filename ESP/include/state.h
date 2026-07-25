@@ -4,7 +4,7 @@
 #include "magnetometer.h"
 
 #define GPS_MAX_HDOP 1.5
-#define MAG_MIN_ACC 2
+#define MAG_MIN_ACC 1
 
 struct wp
 {

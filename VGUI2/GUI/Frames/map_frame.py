@@ -3,13 +3,44 @@ from tkinter import ttk
 from typing import Callable, Tuple
 from PIL import Image, ImageDraw, ImageTk
 import tkintermapview
+from tkintermapview import map_widget as _tmv_map_widget
+import requests
 import os
 
 from GUI.base_frame import BaseFrame
 
+# Fix for slow OpenSeaMap
+class _TimeoutRequests:
+    def __getattr__(self, name):
+        return getattr(requests, name)
+
+    @staticmethod
+    def get(*args, **kwargs):
+        kwargs.setdefault("timeout", 5)
+        return requests.get(*args, **kwargs)
+
+_tmv_map_widget.requests = _TimeoutRequests()
+
+# Required for tkinterMapView overlays
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.LANCZOS
+
 ICON_SIZE = 30
 HOME_ICON_SIZE = 20
 FALLBACK_POS = (60.1849, 24.8250)
+
+BASEMAP_OPTIONS = ["Default", "Satellite", "OpenStreetMap"]
+
+BASE_TILE_SERVERS = {
+    "Default": {
+        False: "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        True: "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+    },
+    "Satellite": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "OpenStreetMap": "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+}
+
+SEAMARK_OVERLAY = "http://tiles.openseamap.org/seamark//{z}/{x}/{y}.png"
 
 base_path = os.path.join(os.path.dirname(__file__), "..", "..")
 
@@ -29,6 +60,7 @@ class MapFrame(BaseFrame):
         self._map_fallback_done = False
         self._last_heading = -1
         self._last_home = (0.0, 0.0)
+        self._is_dark = False
 
         try:
             home_icon_path = os.path.join(base_path, "icons", "home_icon.png")
@@ -57,6 +89,23 @@ class MapFrame(BaseFrame):
         self.chk_follow.pack(side = "left", padx = 5)
 
         ttk.Button(self.toolbar, text = "Snap to target", command = self._center_on_target).pack(side = "left", padx = 6)
+
+        self.basemap_var = tk.StringVar(value = "Default")
+        self.cmb_basemap = ttk.Combobox(
+            self.toolbar, textvariable = self.basemap_var, values = BASEMAP_OPTIONS,
+            state = "readonly", width = 12,
+        )
+        self.cmb_basemap.bind("<<ComboboxSelected>>", lambda _event: self._refresh_base_tiles())
+        self.cmb_basemap.pack(side = "right", padx = 6)
+
+        self.seamark_var = tk.BooleanVar(value = False)
+        self.chk_seamark = tk.Checkbutton(
+            self.toolbar, text = "Charts", variable = self.seamark_var,
+            font = ("Segoe UI", 12), bg = self.theme["panel_bg"], fg = self.theme["fg"],
+            activebackground = self.theme["panel_bg"], activeforeground = self.theme["fg"],
+            selectcolor = self.theme["checkbox"], command = self._refresh_overlay,
+        )
+        self.chk_seamark.pack(side = "right", padx = 5)
 
         self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
         self.widget.pack(fill = "both", expand = True)
@@ -116,14 +165,12 @@ class MapFrame(BaseFrame):
 
         return self._v_icon_cache[heading]
     
-    # Marker Helper
     def _replace_marker(self, old_marker, lat, lon, icon, text):
         if old_marker is not None:
             old_marker.delete()
 
         return self.widget.set_marker(lat, lon, icon = icon, text = text, text_color = self.theme["red"])
     
-    # Toolbar Action
     def _center_on_target(self) -> None:
         d = self.ctrl.get_telemetry_data()
         if d["lat"] or d["lon"]:
@@ -131,11 +178,25 @@ class MapFrame(BaseFrame):
 
     # Tile Server
     def set_tiles(self, is_dark: bool) -> None:
-        if is_dark:
-            self.widget.set_tile_server("https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png")
-        
-        else:
-            self.widget.set_tile_server("https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png")
+        self._is_dark = is_dark
+        self.widget.canvas.config(bg = self.theme["canvas_bg"])
+        self._refresh_base_tiles()
+
+    def _refresh_base_tiles(self) -> None:
+        server = self._resolve_base_tile_server()
+        if server != self.widget.tile_server:
+            self.widget.set_tile_server(server)
+
+    def _resolve_base_tile_server(self) -> str:
+        server = BASE_TILE_SERVERS[self.basemap_var.get()]
+        return server[self._is_dark] if isinstance(server, dict) else server
+
+    def _refresh_overlay(self) -> None:
+        self.widget.set_overlay_tile_server(SEAMARK_OVERLAY if self.seamark_var.get() else None)
+
+        # set_overlay_tile_server() doesnt clear tile cache, reissue set_tile_server() to clear
+
+        self.widget.set_tile_server(self.widget.tile_server)
 
     # Refresh
     def update(self, telemetry: dict, connection: dict) -> None:
@@ -187,3 +248,6 @@ class MapFrame(BaseFrame):
         self.chk_follow.config(bg = theme["panel_bg"], fg = theme["fg"],
                                activebackground = theme["panel_bg"], activeforeground = theme["fg"],
                                selectcolor = self.theme["checkbox"])
+        self.chk_seamark.config(bg = theme["panel_bg"], fg = theme["fg"],
+                                activebackground = theme["panel_bg"], activeforeground = theme["fg"],
+                                selectcolor = self.theme["checkbox"])
