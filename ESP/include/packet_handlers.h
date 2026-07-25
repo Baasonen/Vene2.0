@@ -18,3 +18,5 @@ void handleHomeReqPacket(uint32_t &lastPacketReceivedTime);
 void handleTimeDataPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime);
 
 void handleCourseSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime);
+
+void handleThrottleSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime);

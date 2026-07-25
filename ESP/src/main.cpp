@@ -107,7 +107,7 @@ void controlTask(void* pv)
                 
                 if (distanceToPoint(status.home.lat, status.home.lon, sensors.gps.lat, sensors.gps.lon) > HOME_TRESHOLD)
                 {
-                    setThrottle(AP_THROTTLE);
+                    setThrottle(status.APThrottle);
                     steerTo(headingToPoint(sensors.gps.lat, sensors.gps.lon, status.home.lat, status.home.lon));
                 }
                 else
@@ -120,7 +120,7 @@ void controlTask(void* pv)
 
             case 4: // COURSE HOLD
                 steerTo(status.targetCourse);
-                setThrottle(0);
+                setThrottle(status.APThrottle);
 
                 break;
  

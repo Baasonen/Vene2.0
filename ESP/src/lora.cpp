@@ -159,6 +159,13 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
             }
             break;
 
+        case PKT_THR_SET:
+            if (len == sizeof(throttlePacket))
+            {
+                handleThrottleSetPacket(rxBuffer, lastPacketReceivedTime);
+            }
+            break;
+
         case PKT_UPLOAD_BEGIN:
             if (len == 1) {
                 lastRoutePacketTime = millis();

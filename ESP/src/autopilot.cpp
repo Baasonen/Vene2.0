@@ -32,7 +32,7 @@ bool runAutopilot(SystemStatus& status, const SensorData& sensors, const Route& 
 
     const wp& legEnd = route.waypoints[status.targetWaypoint];
 
-    setThrottle(AP_THROTTLE);
+    setThrottle(status.APThrottle);
 
     if (status.targetWaypoint == 1)
     {

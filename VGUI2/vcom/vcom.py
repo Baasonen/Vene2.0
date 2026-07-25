@@ -11,14 +11,15 @@ from vcom.comms import SerialTransport
 from vcom.protocol import (
     ACK_FORMAT, CONTROL_FORMAT, FAST_FORMAT, HOME_FORMAT,
     RESET_ERRORS_FORMAT, ROUTE_FORMAT, SLOW_FORMAT, TIME_DATA_FORMAT,
-    COURSE_SET_FORMAT, COURSE_DATA_FORMAT,
+    COURSE_SET_FORMAT, COURSE_DATA_FORMAT, THR_SET_FORMAT, THR_DATA_FORMAT,
 
     PKT_CONTROL, PKT_DATA, PKT_HOME_DATA, PKT_HOME_REQ, PKT_HOME_SET,
     PKT_RESET_ERRORS, PKT_TELE_FAST, PKT_TELE_SLOW, PKT_TIME_DATA, PKT_TIME_REQ,
-    PKT_WP_DATA, PKT_COURSE_SET, PKT_COURSE_DATA,
+    PKT_WP_DATA, PKT_COURSE_SET, PKT_COURSE_DATA, PKT_THR_SET, PKT_THR_DATA,
 
     HOME_RETRIES, HOME_TIMEOUT_S,
     COURSE_RETRIES, COURSE_TIMEOUT_S, COURSE_SCALE, COURSE_REQ,
+    THR_RETRIES, THR_TIMEOUT_S, THR_REQ,
     MODE_NAMES, MODE_RETRIES, MODE_TIMEOUT_S,
     ROUTE_RETRIES, ROUTE_TIMEOUT_S,
 
@@ -52,6 +53,9 @@ class Controller:
         self._target_course: float = 0.0
         self._course_valid: bool = False
 
+        self._target_throttle: float = 0.0
+        self._throttle_valid: bool = False
+
         self._upload_status: uploadStatus = uploadStatus.IDLE
         self._upload_current: int = 0 # Number of WP confirmed
         self._upload_total: int = 0
@@ -84,6 +88,7 @@ class Controller:
         self._t.register_handler(PKT_HOME_DATA, self._handle_home_data)
         self._t.register_handler(PKT_TIME_REQ, self._handle_time_req)
         self._t.register_handler(PKT_COURSE_DATA, self._handle_course_data)
+        self._t.register_handler(PKT_THR_DATA, self._handle_throttle_data)
 
         self._t.start()
         threading.Thread(target = self._lora_monitor, daemon = True).start()
@@ -114,6 +119,10 @@ class Controller:
     def get_course_status(self) -> Tuple[float, bool]:
         with self._data_lock:
             return self._target_course, self._course_valid
+
+    def get_throttle_status(self) -> Tuple[float, bool]:
+        with self._data_lock:
+            return self._target_throttle, self._throttle_valid
         
     # Manual control
     @property
@@ -192,6 +201,20 @@ class Controller:
             return
         
         threading.Thread(target = self._set_course_task, args = (None,), daemon = True).start()
+
+    def set_throttle(self, throttle: float) -> None:
+        if not self._t.lora_online:
+            print("[CTRL] LoRa offline")
+            return
+
+        threading.Thread(target = self._set_throttle_task, args = (throttle, ), daemon = True).start()
+
+    def request_throttle(self) -> None:
+        if not self._t.lora_online:
+            print("[CTRL] LoRa offline")
+            return
+
+        threading.Thread(target = self._set_throttle_tast, args = (None, ), daemon = True).start()
 
     # Worker tasks
     def _set_mode_task(self, mode: int) -> None:
@@ -330,6 +353,25 @@ class Controller:
             label = "Request" if is_req else "Set"
             print(f"[CRS] {label} timeout attempt {attempt} / {COURSE_RETRIES}")
 
+    def _set_throttle_task(self, throttle: Optional[float]) -> None:
+        is_req = throttle is None
+        raw = THR_REQ if is_req else int (round(max(-100, min(100, throttle))))
+        pkt = struct.pack(THR_SET_FORMAT, PKT_THR_SET, raw)
+
+        for attempt in range(1, THR_RETRIES + 1):
+            if not self._t.lora_online:
+                return
+            self._throttle_data_event.clear()
+
+            if not self._t.write(pkt):
+                return
+
+            if self._throttle_data_event.wait(timeout = THR_TIMEOUT_S):
+                return
+
+            label = "Request" if is_req else "Set"
+            print(f"[CTRL] {label} timeout attempt {attempt} / {THR_RETRIES}")
+
     # Pakcet handlers
     def _handle_fast_tele(self, payload: bytes) -> None:
         _, heading, mode, target_idx = struct.unpack(FAST_FORMAT, payload)
@@ -432,6 +474,17 @@ class Controller:
 
         self._course_data_event.set()
 
+    def _handle_throttle_data(self, payload: bytes) -> None:
+        _, raw_throttle = struct.unpack(THR_DATA_FORMAT, payload)
+
+        self._t.update_lora_t()
+
+        with self._data_lock:
+            self._target_throttle = raw_throttle
+            self._throttle_valid = True
+
+        self._throttle_data_event.set()
+
     # LoRa monito
     def _lora_monitor(self) -> None:
         while self._t.running:
@@ -446,6 +499,7 @@ class Controller:
 
             if not self._lora_was_online and now_online:
                 threading.Thread(target = self._set_course_task, args = (None,), daemon = True).start()
+                threading.Thread(target = self._set_throttle_task, args = (None, ), daemon = True).start()
 
             self._lora_was_online = now_online
             time.sleep(0.5)

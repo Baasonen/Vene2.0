@@ -3,7 +3,7 @@ from tkinter import ttk
 from typing import Dict, Optional, Tuple
 
 from GUI.base_frame import BaseFrame
-from vcom.protocol import MODE_MANUAL, MODE_COURSE
+from vcom.protocol import MODE_MANUAL, MODE_COURSE, MODE_AUTO, MODE_RTH
 
 try:
     import pygame
@@ -141,6 +141,37 @@ class ManualControlFrame(BaseFrame):
                                             bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
         self.lbl_course_readout.pack(side = "left")
 
+        # A/P Throttle
+        self.thr_ap_frame = tk.Frame(self.frame, bg = self.theme["panel_bg"], bd = 1,
+                                      relief = "solid", highlightbackground = self.theme["border"])
+        self.thr_ap_frame.pack(fill = "x", padx = 8, pady = (0, 8))
+
+        self.thr_ap_header_row = tk.Frame(self.thr_ap_frame, bg = self.theme["panel_bg"])
+        self.thr_ap_header_row.pack(fill = "x", padx = 6, pady = (5, 3))
+
+        self.lbl_thr_ap_title = tk.Label(self.thr_ap_header_row, text = "A/P THROTTLE",
+                                          font = ("Segoe UI", 8, "bold"),
+                                          bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+        self.lbl_thr_ap_title.pack(side = "left")
+
+        self.thr_ap_input_row = tk.Frame(self.thr_ap_frame, bg = self.theme["panel_bg"])
+        self.thr_ap_input_row.pack(fill = "x", padx = 6, pady = (0, 6))
+
+        self.thr_ap_entry = tk.Entry(self.thr_ap_input_row, width = 6, font = ("Segoe UI", 12),
+                                      bg = self.theme["canvas_bg"], fg = self.theme["fg"],
+                                      insertbackground = self.theme["fg"], relief = "flat")
+        self.thr_ap_entry.pack(side = "left", padx = (0, 6))
+        self.thr_ap_entry.bind("<Return>", lambda e: self._on_set_throttle_ap())
+
+        self.btn_set_thr_ap = ttk.Button(self.thr_ap_input_row, text = "SET",
+                                  command = self._on_set_throttle_ap)
+        self.btn_set_thr_ap.pack(side = "left", padx = (0, 12))
+
+        self.lbl_thr_ap_readout = tk.Label(self.thr_ap_input_row, text = "--%",
+                                            font = ("Consolas", 12, "bold"),
+                                            bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+        self.lbl_thr_ap_readout.pack(side = "left")
+
     def _bind_keys(self) -> None:
         bindings = {
             "<KeyPress-Up>": ("up", True), "<KeyRelease-Up>": ("up", False),
@@ -205,6 +236,21 @@ class ManualControlFrame(BaseFrame):
         course = course % 360
         self.ctrl.set_course(course)
         self.course_entry.delete(0, tk.END)
+
+    def _on_set_throttle_ap(self) -> None:
+        text = self.thr_ap_entry.get().strip()
+
+        try:
+            throttle = float(text)
+        except ValueError:
+            self.thr_ap_entry.config(bg = self.theme["red"])
+            self.root.after(400, lambda: self.thr_ap_entry.config(bg = self.theme["canvas_bg"]))
+            return
+
+        throttle = max(-100, min(100, throttle))
+        self.ctrl.set_throttle(throttle)
+        self.thr_ap_entry.delete(0, tk.END)
+
 
     @staticmethod
     def _step_toward(current: float, target: float, max_step: float) -> float:
@@ -326,6 +372,22 @@ class ManualControlFrame(BaseFrame):
         else:
             self.lbl_course_readout.config(text = "--.-°", fg = self.theme["fg_dim"])
 
+        throttle_ap, thr_valid = self.ctrl.get_throttle_status()
+
+        if thr_valid:
+            text = f"{throttle_ap:.0f}%"
+
+            if self._current_mode in (MODE_AUTO, MODE_RTH, MODE_COURSE):
+                color = self.theme["green"]
+
+            else:
+                color = self.theme["fg"]
+
+            self.lbl_thr_ap_readout.config(text = text, fg = color)
+
+        else:
+            self.lbl_thr_ap_readout.config(text = "--%", fg = self.theme["fg_dim"])
+
         self.root.after(POLL_MS, self._poll)
 
     def _draw_bars(self) -> None:
@@ -390,6 +452,15 @@ class ManualControlFrame(BaseFrame):
         self.course_entry.config(bg = theme["canvas_bg"], fg = theme["fg"], insertbackground = theme["fg"])
 
         self.lbl_course_readout.config(bg = theme["panel_bg"])
+
+        self.thr_ap_frame.config(bg = theme["panel_bg"], highlightbackground = theme["border"])
+        self.thr_ap_header_row.config(bg = theme["panel_bg"])
+        self.thr_ap_input_row.config(bg = theme["panel_bg"])
+
+        self.lbl_thr_ap_title.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
+        self.thr_ap_entry.config(bg = theme["canvas_bg"], fg = theme["fg"], insertbackground = theme["fg"])
+
+        self.lbl_thr_ap_readout.config(bg = theme["panel_bg"])
 
         self._draw_bars()
  

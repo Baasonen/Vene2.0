@@ -25,6 +25,7 @@ typedef struct
     uint8_t battery;
     uint8_t targetWaypoint;
     int16_t targetCourse;
+    int8_t APThrottle;
 
     bool loraTimeout;
     int8_t loraRSSI;

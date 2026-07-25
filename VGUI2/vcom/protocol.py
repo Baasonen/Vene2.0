@@ -60,6 +60,13 @@ COURSE_SET_SIZE = struct.calcsize(COURSE_SET_FORMAT)
 COURSE_DATA_FORMAT = "<Bh"
 COURSE_DATA_SIZE = struct.calcsize(COURSE_DATA_FORMAT)
 
+THR_SET_FORMAT = "<Bb"
+THR_SET_SIZE = struct.calcsize(THR_SET_FORMAT)
+
+THR_DATA_FORMAT = "<Bb"
+THR_DATA_SIZE = struct.calcsize(THR_DATA_FORMAT)
+
+
 # Packet IDs
 
 PKT_WP_DATA = 0x01 # U : WP data during upload
@@ -77,6 +84,8 @@ PKT_TIME_DATA = 0x0C # U : Send unix time
 PKT_DATA = 0x10 # U/D : ACK payload / hb
 PKT_COURSE_SET = 0x0D # U : Set or request (-1) target course
 PKT_COURSE_DATA = 0x0E # D : Currently set target course (for MODE_CRS)
+PKT_THR_SET = 0x11 # U : Set or request (-110) A/P throttle
+PKT_THR_DATA = 0x12 # D : Currently set A/P throttle
 PKT_UPLOAD_BEGIN = 0x0F
 
 # Modes
@@ -113,7 +122,12 @@ COURSE_SCALE = 1 # 1 for whole deg res, 10 for 1/10 deg resolution
 COURSE_REQ = -1
 
 COURSE_TIMEOUT_S = 2.0
-COURSE_RETRIES = 5
+COURSE_RETRIES = 10
+
+THR_REQ = -110
+
+THR_TIMEOUT_S = 1.7
+THR_RETRIES = 10
 
 # Upload state
 

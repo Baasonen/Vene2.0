@@ -108,6 +108,7 @@ void loop()
         else if (id == PKT_TIME_DATA) {expected_len = TIME_DATA_SIZE;}
         else if (id == PKT_COURSE_SET) {expected_len = COURSE_SET_SIZE;}
         else if (id == PKT_UPLOAD_BEGIN) {expected_len = UPLOAD_BEGIN_SIZE;}
+        else if (id == PKT_THR_SET) {expected_len = THR_SET_SIZE;}
         else
         {
             Serial.read();   // discard unknown byte
@@ -127,6 +128,7 @@ void loop()
                 id == PKT_HOME_REQ ||
                 id == PKT_TIME_DATA ||
                 id == PKT_COURSE_SET ||
+                id == PKT_THR_SET ||
                 id == PKT_UPLOAD_BEGIN)
             {
                 static uint32_t lastLoRaTx = 0;

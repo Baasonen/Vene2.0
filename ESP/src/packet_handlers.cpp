@@ -206,3 +206,26 @@ void handleCourseSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 
     beginTransmit((uint8_t*)&response, sizeof(response));
 }
+
+void handleThrottleSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
+{
+    lastPacketReceivedTime = millis();
+    throttlePacket* tp = (throttlePacket*)rxBuffer;
+
+    throttlePacket response =  {};
+    response.packetID = PKT_THR_DATA;
+
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+    {
+        if (tp->throttle >= -100 && tp->throttle < 100)
+        {
+            globalState.status.APThrottle = tp->throttle;
+        }
+
+        response.throttle = globalState.status.APThrottle;
+        globalState.status.loraTimeout = false;
+        xSemaphoreGive(stateMutex);
+    }
+
+    beginTransmit((uint8_t*)&response, sizeof(response));
+}

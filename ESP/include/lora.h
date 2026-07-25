@@ -37,6 +37,8 @@
 #define PKT_COURSE_SET 0x0D
 #define PKT_COURSE_DATA 0x0E
 #define PKT_UPLOAD_BEGIN 0x0F
+#define PKT_THR_SET 0x11
+#define PKT_THR_DATA 0x12
 
 #pragma pack(push, 1)
 
@@ -117,6 +119,12 @@ struct courseDataPacket
 {
     uint8_t packetID;
     int16_t course;
+};
+
+struct throttlePacket
+{
+    uint8_t packetID;
+    int8_t throttle;
 };
 
 #pragma pack(pop)

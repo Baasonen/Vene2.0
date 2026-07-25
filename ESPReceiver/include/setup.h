@@ -55,3 +55,9 @@
 
 #define PKT_UPLOAD_BEGIN 0x0F
 #define UPLOAD_BEGIN_SIZE 1
+
+#define PKT_THR_SET 0x11
+#define THR_SET_SIZE 2
+
+#define PKT_THR_DATA 0x12
+#define THR_DATA_SIZE 2
