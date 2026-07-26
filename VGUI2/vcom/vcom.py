@@ -77,6 +77,7 @@ class Controller:
         self._home_data_event = threading.Event()
 
         self._course_data_event = threading.Event()
+        self._throttle_data_event = threading.Event()
         
         self._lora_was_online: bool = False
 
@@ -214,7 +215,7 @@ class Controller:
             print("[CTRL] LoRa offline")
             return
 
-        threading.Thread(target = self._set_throttle_tast, args = (None, ), daemon = True).start()
+        threading.Thread(target = self._set_throttle_task, args = (None, ), daemon = True).start()
 
     # Worker tasks
     def _set_mode_task(self, mode: int) -> None:
