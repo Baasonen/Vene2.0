@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import Tuple
+from typing import Tuple, Optional
 import os
 import math
 
@@ -30,6 +30,7 @@ class WaypointFrame(BaseFrame):
         self._path = None
         self._route_changed = True
         self._prev_status = uploadStatus.IDLE
+        self._selected_idx: Optional[int] = None
 
         try:
             icon_path = os.path.join(base_path, "icons", "wp_icon.png")
@@ -37,6 +38,13 @@ class WaypointFrame(BaseFrame):
         except Exception:
             self._wp_icon = None
             print("Unable to load WP icon")
+
+        try:
+            selected_icon_path = os.path.join(base_path, "icons", "wp_icon_selected.png")
+            self._wp_icon_selected = tk.PhotoImage(file = selected_icon_path)
+        except Exception:
+            self._wp_icon_selected = None
+            print("Unable to load selected WP icon")
 
         super().__init__(parent, theme, ctrl)
 
@@ -77,6 +85,7 @@ class WaypointFrame(BaseFrame):
                                   bg = self.theme["canvas_bg"], fg = self.theme["fg"],
                                   selectbackground = self.theme["accent"])
         self.listbox.pack(side = "left", fill = "both", expand = True)          # fill: x -> both
+        self.listbox.bind("<<ListboxSelect>>", self._on_listbox_select)
 
         scrollbar = ttk.Scrollbar(self.list_container, orient = "vertical", command = self.listbox.yview)
         scrollbar.pack(side = "left", fill = "y")
@@ -96,12 +105,58 @@ class WaypointFrame(BaseFrame):
     def clear(self) -> None:
         self.waypoints.clear()
         self._route_changed = True
+        self._selected_idx = None
         self.refresh()
 
     def upload(self) -> None:
         #self.ctrl.send_test_route()
         if self.waypoints:
             self.ctrl.send_route(self.waypoints)
+
+    def save_route(self, path: str) -> None:
+        try:
+            with open(path, "w") as f:
+                for lat, lon in self.waypoints:
+                    f.write(f"{lat}, {lon}\n")
+
+        except OSError as e:
+            print(f"[RTE] Failed to save roue: {e}")
+
+    def load_route(self, path: str) -> None:
+        try:
+            with open(path, "r") as f:
+                lines = f.readlines()
+
+        except OSError as e:
+            print(f"[RTE] Failed to load route: {e}")
+            return
+
+        new_waypoints = []
+
+        for line_num, raw_line in enumerate(lines, start = 1):
+            line = raw_line.strip()
+
+            if not line:
+                return
+
+            parts = line.split(",")
+
+            if len(parts) != 2:
+                print(f"[RTE] Invalid data on line {line_num}: {raw_line.strip()}")
+                return
+
+            try:
+                lat, lon = float(parts[0].strip()), float(parts[1].strip())
+
+            except ValueError:
+                print(f"[RTE] Invalid coordinates on line {line_num}: {raw_line.strip()}")
+                return
+
+            new_waypoints.append((lat, lon))
+
+        self.waypoints = new_waypoints
+        self._route_changed = True
+        self.refresh()
 
     # Reorder Functions
     def _move_up(self) -> None:
@@ -126,6 +181,35 @@ class WaypointFrame(BaseFrame):
         self._route_changed = True
         self.refresh(select = idx + 1)
 
+    # Selection Highlight
+    def _on_listbox_select(self, event = None) -> None:
+        sel = self.listbox.curselection()
+        new_idx = sel[0] if sel else None
+
+        if new_idx == self._selected_idx:
+            return
+
+        self._selected_idx = new_idx
+        self._redraw_markers()
+
+    def _redraw_markers(self) -> None:
+        for m in self._markers:
+            m.delete()
+
+        self._markers.clear()
+
+        for idx, (lat, lon) in enumerate(self.waypoints):
+            is_selected = idx == self._selected_idx
+            icon = self._wp_icon_selected if is_selected else self._wp_icon
+            text_color = self.theme["orange"] if is_selected else self.theme["red"]
+
+            if icon is not None:
+                self._markers.append(
+                    self.map_widget.set_marker(lat, lon, text = str(idx + 1), icon = icon, text_color = text_color)
+                )
+            else:
+                print("[GUI] WP icon not loaded")
+
     # Sync list and map
     def refresh(self, select: int = None) -> None:
         self.listbox.delete(0, "end")
@@ -136,21 +220,15 @@ class WaypointFrame(BaseFrame):
         if select is not None and 0 <= select < len(self.waypoints):
             self.listbox.select_set(select)
             self.listbox.activate(select)
-
-        for m in self._markers:
-            m.delete()
-
-        self._markers.clear()
+            self._selected_idx = select
+        elif self._selected_idx is not None and self._selected_idx >= len(self.waypoints):
+            self._selected_idx = None
 
         if self._path is not None:
             self._path.delete()
             self._path = None
 
-        for idx, (lat, lon) in enumerate(self.waypoints):
-            if self._wp_icon is not None:   
-                self._markers.append(self.map_widget.set_marker(lat, lon, text = str(idx + 1), icon = self._wp_icon, text_color = self.theme["red"]))
-            else:
-                print("[GUI] WP icon not loaded")
+        self._redraw_markers()
 
         if len(self.waypoints) > 1:
             self._path = self.map_widget.set_path(self.waypoints, color = self.theme["accent"], width = 3)

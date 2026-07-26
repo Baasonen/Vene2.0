@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 from typing import Callable, Tuple
 from PIL import Image, ImageDraw, ImageTk
 import tkintermapview
@@ -29,6 +29,8 @@ ICON_SIZE = 30
 HOME_ICON_SIZE = 20
 FALLBACK_POS = (60.1849, 24.8250)
 
+ROUTES_DIR = os.path.join(os.getcwd(), "Routes")
+
 BASEMAP_OPTIONS = ["Default", "Satellite", "OpenStreetMap"]
 
 BASE_TILE_SERVERS = {
@@ -47,10 +49,14 @@ base_path = os.path.join(os.path.dirname(__file__), "..", "..")
 class MapFrame(BaseFrame):
     def __init__(self, parent, theme, ctrl,
                  on_add_waypoint: Callable[[Tuple[float, float]], None],
-                 on_set_home: Callable[[Tuple[float, float]], None]):
+                 on_set_home: Callable[[Tuple[float, float]], None],
+                 on_save_route: Callable[[str], None],
+                 on_load_route: Callable[[str], None]):
         
         self.on_add_waypoint = on_add_waypoint
         self.on_set_home = on_set_home
+        self.on_save_route = on_save_route
+        self.on_load_route = on_load_route
 
         self._v_marker = None
         self._v_icon_cache: dict[int, ImageTk.PhotoImage] = {}
@@ -63,7 +69,7 @@ class MapFrame(BaseFrame):
         self._is_dark = False
 
         try:
-            home_icon_path = os.path.join(base_path, "icons", "home_icon.png")
+            home_icon_path = os.path.join(base_path, "Icons", "home_icon.png")
             self._home_icon = tk.PhotoImage(file = home_icon_path)
         except Exception:
             print("Failed to load home icon")
@@ -89,6 +95,9 @@ class MapFrame(BaseFrame):
         self.chk_follow.pack(side = "left", padx = 5)
 
         ttk.Button(self.toolbar, text = "Snap to target", command = self._center_on_target).pack(side = "left", padx = 6)
+
+        ttk.Button(self.toolbar, text = "Save Route", command = self._on_save_route_click).pack(side = "left", padx = 6)
+        ttk.Button(self.toolbar, text = "Load Route", command = self._on_load_route_click).pack(side = "left", padx = 6)
 
         self.basemap_var = tk.StringVar(value = "Default")
         self.cmb_basemap = ttk.Combobox(
@@ -127,7 +136,7 @@ class MapFrame(BaseFrame):
     @staticmethod
     def _load_icon() -> Image.Image:
         try:
-            raw = Image.open("icons/vene1.png").convert("RGBA")
+            raw = Image.open("Icons/vene1.png").convert("RGBA")
         except (FileNotFoundError, OSError):
             raw = MapFrame._make_fallback_icon()
 
@@ -175,6 +184,32 @@ class MapFrame(BaseFrame):
         d = self.ctrl.get_telemetry_data()
         if d["lat"] or d["lon"]:
             self.widget.set_position(d["lat"], d["lon"])
+
+    def _on_save_route_click(self) -> None:
+        os.makedirs(ROUTES_DIR, exist_ok = True)
+
+        path = filedialog.asksaveasfilename(
+            defaultextension = ".rte",
+            filetypes = [("Route", "*.rte"), ("All files", "*.*")],
+            title = "Save Route",
+            initialdir = ROUTES_DIR,
+        )
+
+        if path:
+            self.on_save_route(path)
+
+    def _on_load_route_click(self) -> None:
+        os.makedirs(ROUTES_DIR, exist_ok = True)
+
+        path = filedialog.askopenfilename(
+            defaultextension = ".rte",
+            filetypes = [("Route", "*.rte"), ("All files", "*.*")],
+            title = "Load Route",
+            initialdir = ROUTES_DIR,
+        )
+
+        if path:
+            self.on_load_route(path)
 
     # Tile Server
     def set_tiles(self, is_dark: bool) -> None:

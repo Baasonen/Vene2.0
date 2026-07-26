@@ -83,7 +83,9 @@ class VGUI:
 
         self.map_frame = MapFrame(self.col_mid, self.theme, self.ctrl, 
                                   on_add_waypoint = self._on_add_waypoint,
-                                  on_set_home = self._on_set_home)
+                                  on_set_home = self._on_set_home,
+                                  on_save_route = self._on_save_route,
+                                  on_load_route = self._on_load_route)
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
         self.mode_select_frame = ModeSelectFrame(self.col_right, self.theme, self.ctrl)
         self.manual_control_frame = ManualControlFrame(self.col_right, self.theme, self.ctrl, self.root)
@@ -108,6 +110,12 @@ class VGUI:
 
     def _on_set_home(self, coords: Tuple[float, float]) -> None:
         self.ctrl.set_home(coords[0], coords[1])
+
+    def _on_save_route(self, path: str) -> None:
+        self.waypoint_frame.save_route(path)
+
+    def _on_load_route(self, path: str) -> None:
+        self.waypoint_frame.load_route(path)
     
     def _refresh(self) -> None:
         telemetry = self.ctrl.get_telemetry_data()
