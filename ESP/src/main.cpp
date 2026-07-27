@@ -19,6 +19,7 @@
 #include "navigation.h"
 #include "errors.h"
 #include "autopilot.h"
+#include "led.h"
 
 #define WDT_TIMEOUT 5
 
@@ -156,7 +157,7 @@ void wifiTask(void* pv)
 }
 
 // CORE 0 | PRIORITY 1 | 0.5 HZ
-void diagTask(void* pd)
+void diagTask(void* pv)
 {
     uint32_t startMillis = millis();
 
@@ -197,6 +198,40 @@ void diagTask(void* pd)
     }
 }
 
+void ledTask(void* pv)
+{
+    for(;;)
+    {
+        vTaskDelay(100);
+
+        SystemStatus status = {};
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            status = globalState.status;
+
+            xSemaphoreGive(stateMutex);
+        }
+
+        leds[0] = CRGB::White;
+
+        switch(status.mode)
+        {
+            case 0:
+                leds[1] = CRGB::Red;
+
+                break;
+
+            default:
+                leds[1] = CRGB::Green;
+
+                break;
+        }
+
+        FastLED.show();
+    }
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -225,6 +260,8 @@ void setup()
     if (!GPSInit()) {Serial.println("[INIT] GPS init failed"); sensorInitFail = true;}
 
     if (!sensorInitFail) {Serial.println("[INIT] Sensor init OK");}
+
+    ledSetup();
 
     controlInit();
     WiFiInit();
