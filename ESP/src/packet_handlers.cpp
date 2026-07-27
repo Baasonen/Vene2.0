@@ -17,18 +17,18 @@ void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint
         tempRoute.id = rp->id;
         tempRoute.length = rp->ammnt;
         receivedCount = 0;
-        memset(wpReceived, 0, 50 * sizeof(bool));
+        memset(wpReceived, 0, WP_AMMNT_LIM * sizeof(bool));
     }
 
-    if ((rp->id == tempRoute.id) && (rp->order < 50))
+    if ((rp->id == tempRoute.id) && (rp->order < WP_AMMNT_LIM))
     {
         dataPacket ack = {PKT_DATA, rp->id, rp->order};
         beginTransmit((uint8_t*)&ack, sizeof(ack));
 
         if (!wpReceived[rp->order])
         {
-            tempRoute.waypoints[rp->order].lat = rp->lat;
-            tempRoute.waypoints[rp->order].lon = rp->lon;
+            tempRoute.waypoints[rp->order + 1].lat = rp->lat;
+            tempRoute.waypoints[rp->order + 1].lon = rp->lon;
             wpReceived[rp->order] = true;
             receivedCount++;
 
@@ -40,6 +40,8 @@ void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint
                 {
                     globalState.status.loraTimeout = false;
                     globalState.status.routeReady = true;
+                    globalState.status.targetWaypoint = 0; // Reset tgt WP to reset A/P state
+                    globalState.status.mode = 0; // Prevent unintended behaviour if A/P enabled when new route received
 
                     globalState.route = tempRoute;
 

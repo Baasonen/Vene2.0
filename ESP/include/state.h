@@ -5,6 +5,7 @@
 
 #define GPS_MAX_HDOP 1.5
 #define MAG_MIN_ACC 1
+#define WP_AMMNT_LIM 100
 
 struct wp
 {
@@ -13,7 +14,7 @@ struct wp
 
 typedef struct 
 {   
-    wp waypoints[51];
+    wp waypoints[WP_AMMNT_LIM + 1];
     uint8_t id;
     uint8_t length;
     bool newRouteAvailable;
