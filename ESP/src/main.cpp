@@ -199,7 +199,11 @@ void diagTask(void* pv)
 }
 
 void ledTask(void* pv)
-{
+{   
+    uint32_t lastLedTime = 0;
+
+    // LED 0: Top
+    // LED 1: Bottom
     for(;;)
     {
         vTaskDelay(100);
@@ -213,17 +217,31 @@ void ledTask(void* pv)
             xSemaphoreGive(stateMutex);
         }
 
-        leds[0] = CRGB::White;
+        if (millis() - lastLedTime > 2000)
+        {
+            leds[1] = CRGB::White;
+
+            lastLedTime = millis();
+        }
+        else
+        {
+            leds[1] = CRGB::Black;
+        }
 
         switch(status.mode)
         {
             case 0:
-                leds[1] = CRGB::Red;
+                leds[0] = CRGB::Red;
+
+                break;
+
+            case 1:
+                leds[0] = CRGB::Blue;
 
                 break;
 
             default:
-                leds[1] = CRGB::Green;
+                leds[0] = CRGB::Green;
 
                 break;
         }
@@ -275,6 +293,7 @@ void setup()
     xTaskCreatePinnedToCore(sensorTask, "Sensor", 4096, NULL, 4, NULL, 1);
     xTaskCreatePinnedToCore(controlTask, "Control", 8192, NULL, 3, NULL, 1);
     xTaskCreatePinnedToCore(wifiTask, "WiFi", 4096, NULL, 2, NULL, 1);
+    xTaskCreatePinnedToCore(ledTask, "LED", 4096, NULL, 2, NULL, 1);
 
     // CORE 0
     xTaskCreatePinnedToCore(commsTask, "Comms", 8192, NULL, 2, NULL, 0);
