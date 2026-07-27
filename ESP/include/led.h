@@ -2,7 +2,7 @@
 
 #include <FastLED.h>
 
-#define LED_D_PIN 5
+#define LED_D_PIN 19
 #define NUMBER_LEDS 2
 
 CRGB leds[NUMBER_LEDS];
