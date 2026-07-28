@@ -136,6 +136,8 @@ class ErrorFrame(BaseFrame):
             if name in IGNORED_LOG_NAMES:
                 continue
 
+            print(f"[ERROR] BIT {bit} - {name}" + (f"({desc})" if desc else ""), file = sys.stderr)
+
             self.log.insert("end", f"[{ts}] ", "ts")
             self.log.insert("end", f"ERROR SET: BIT {bit} - {name}", "set")
 

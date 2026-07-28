@@ -59,6 +59,7 @@ class Controller:
         self._upload_status: uploadStatus = uploadStatus.IDLE
         self._upload_current: int = 0 # Number of WP confirmed
         self._upload_total: int = 0
+        self._route_id_counter: int = 0
 
         # Callbacks
         self.on_telemetry: Optional[Callable[[dict], None]] = None
@@ -150,10 +151,14 @@ class Controller:
         
         threading.Thread(target = self._set_mode_task, args = (mode,), daemon = True).start()
 
-    def send_route(self, waypoints: List[Tuple[float, float]], route_id: int = 100) -> None:
+    def send_route(self, waypoints: List[Tuple[float, float]], route_id: Optional[int] = None) -> None:
         if not self._t.connected:
             print("[ROUTE] Receiver offline")
             return
+
+        if route_id is None:
+            route_id = (self._route_id_counter % 100) + 1
+            self._route_id_counter = route_id
         
         threading.Thread(target = self._upload_route_task, args = (waypoints, route_id), daemon = True).start()
 

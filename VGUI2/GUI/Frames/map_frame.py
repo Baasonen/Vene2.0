@@ -128,6 +128,8 @@ class MapFrame(BaseFrame):
             label = "Set Home WP", command = self.on_set_home, pass_coords = True
         )
 
+        self.widget.canvas.bind("<Double-Button-1>", self._on_map_double_click)
+
         self._v_img_orig = self._load_icon()
         if self._home_icon == None:
             self._home_icon = ImageTk.PhotoImage(self._make_home_pin_icon())
@@ -210,6 +212,13 @@ class MapFrame(BaseFrame):
 
         if path:
             self.on_load_route(path)
+
+    def _on_map_double_click(self, event) -> None:
+        if self.ctrl.get_telemetry_data().get("mode") == 4:
+            return
+
+        lat, lon = self.widget.convert_canvas_coords_to_decimal_coords(event.x, event.y)
+        self.on_add_waypoint((lat, lon))
 
     # Tile Server
     def set_tiles(self, is_dark: bool) -> None:
