@@ -1,18 +1,10 @@
-"""
-Serial layer for vcom
-
--Auto reconnect for USB/Lora receiver
--RX pareser
--Manual control thread (10 Hz)
--TX hearbeat thread (0.5 Hz)
--Track LoRa and WiFi staleness
-
-"""
-
 import serial
 import struct
 import threading
 import time
+
+# Debug with vemulator
+CONNECT_TO_DEBUGGER = True
 
 from typing import Callable, Dict, Optional
 
@@ -160,7 +152,11 @@ class SerialTransport:
                     if self.ser:
                         self.ser.close()
 
-                    self.ser = serial.Serial(self.port, self.baud, timeout = 0.1)
+                    if CONNECT_TO_DEBUGGER:
+                        self.port = "socket://127.0.0.1:5555"
+                        self.ser = serial.serial_for_url(self.port, self.baud, timeout = 0.1)
+                    else:                      
+                        self.ser = serial.Serial(self.port, self.baud, timeout = 0.1)
 
                     with self._state_lock:
                         self._connected = True

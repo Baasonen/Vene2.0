@@ -156,7 +156,7 @@ class VGUI:
 
 
     def _on_error_change(self, new_bits, cleared_bits) -> None:
-        pass
+        self.error_frame.log_changes(new_bits, cleared_bits)
 
     def _on_home_received(self, lat: float, lon: float) -> None:
         def _update() -> None:

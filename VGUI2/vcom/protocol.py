@@ -1,15 +1,3 @@
-"""
-
-B uin8
-b int8
-
-I uint32
-
-d float64
-f float32
-
-"""
-
 import os
 import struct
 

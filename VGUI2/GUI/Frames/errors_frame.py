@@ -104,14 +104,20 @@ class ErrorFrame(BaseFrame):
         self._refresh_error_display(self._last_error)
 
     def _refresh_error_display(self, error: int) -> None:
-        self.lbl_hex.config(text = f"0x{error:08X}",
-                            fg = self.theme["green"] if error == 0 else self.theme["orange"])
+        if error == 0:
+            hex_color = self.theme["orange"]
+        elif error == 1:
+            hex_color = self.theme["green"]
+        else:
+            hex_color = self.theme["red"]
+
+        self.lbl_hex.config(text = f"0x{error:08X}", fg = hex_color)
 
         self.listbox.delete(0, "end")
 
         if error == 0:
             self.listbox.insert("end", "No active errors")
-            self.listbox.itemconfig(0, fg = self.theme["green"], bg = self.theme["canvas_bg"])
+            self.listbox.itemconfig(0, fg = self.theme["orange"], bg = self.theme["canvas_bg"])
 
         else:
             for bit in range(32):
@@ -136,13 +142,13 @@ class ErrorFrame(BaseFrame):
             if name in IGNORED_LOG_NAMES:
                 continue
 
-            print(f"[ERROR] BIT {bit} - {name}" + (f"({desc})" if desc else ""), file = sys.stderr)
+            #print(f"[ERROR] BIT {bit}: {name}" + (f"\n({desc})" if desc else ""), file = sys.stderr)
 
             self.log.insert("end", f"[{ts}] ", "ts")
-            self.log.insert("end", f"ERROR SET: BIT {bit} - {name}", "set")
+            self.log.insert("end", f"[ERROR]\nERROR SET: BIT {bit} - {name}\n", "set")
 
             if desc:
-                self.log.insert("end", f" ({desc})")
+                self.log.insert("end", f"({desc})\n", "set")
 
             self.log.insert("end", "\n")
 
@@ -153,7 +159,7 @@ class ErrorFrame(BaseFrame):
                 continue
 
             self.log.insert("end", f"[{ts}] ", "ts")
-            self.log.insert("end", f"ERROR CLEARED: BIT {bit} - {name}\n", "cleared")
+            self.log.insert("end", f"[CLRERR]\nCLEARED ERROR: {bit} - {name}\n\n", "cleared")
 
         self.log.see("end")
         self.log.config(state = "disabled")
