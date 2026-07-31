@@ -4,7 +4,7 @@ import threading
 import time
 
 # Debug with vemulator
-CONNECT_TO_DEBUGGER = True
+CONNECT_TO_DEBUGGER = False
 
 from typing import Callable, Dict, Optional
 
