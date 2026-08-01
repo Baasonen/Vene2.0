@@ -3,20 +3,10 @@ from tkinter import ttk
 from typing import Dict, Optional, Tuple
 
 from GUI.base_frame import BaseFrame
-from vcom.protocol import MODE_MANUAL, MODE_COURSE, MODE_AUTO, MODE_RTH
+from vcom.protocol import MODE_STOP, MODE_MANUAL, MODE_COURSE, MODE_AUTO, MODE_RTH
 
-try:
-    import pygame
-    PYGAME_AVAIL = True
-except ImportError:
-    PYGAME_AVAIL = False
-
-STICK_DZ = 0.1
-TRIGGER_DZ = 0.05
-
-AXIS_RUDDER = 0
-AXIS_THROTTLE_RT = 5
-AXIS_THROTTLE_LT = 4
+from GUI.gamepad import GamepadInput, PYGAME_AVAIL
+from GUI.control_mapping import ControllerMapper, make_xbox_profile
 
 POLL_MS = 50
 
@@ -41,8 +31,8 @@ class ManualControlFrame(BaseFrame):
             "d": False,
         }
 
-        self._joystick = None
-        self._gamepad_name = "None"
+        self._gamepad = GamepadInput()
+        self._mapper = ControllerMapper(make_xbox_profile())
 
         self._current_mode = 0
         self._throttle = 0.0
@@ -51,7 +41,10 @@ class ManualControlFrame(BaseFrame):
         super().__init__(parent, theme, ctrl)
 
         self._bind_keys()
-        self._init_gamepad()
+
+        if not PYGAME_AVAIL:
+            self.lbl_gamepad.config(text = "Gamepda: pygame not avail")
+
         self._poll()
 
     def build(self) -> None:
@@ -261,83 +254,19 @@ class ManualControlFrame(BaseFrame):
             return max(current - max_step, target)
         
         return current
-    
-    def _init_gamepad(self) -> None:
-        if not PYGAME_AVAIL:
-            self.lbl_gamepad.config(text = "Gamepad: pygame not available")
-            return
-        
-        try: 
-            pygame.init()
-            pygame.joystick.init()
-        except Exception as e:
-            print(f"[MANUAL] Pygame init failed: {e}")
-
-    def _refresh_gamepad(self) -> None:
-        if not PYGAME_AVAIL:
-            return
-        
-        if pygame.joystick.get_count() == 0:
-            if self._joystick is not None:
-                self._joystick = None
-                self._gamepad_name = "None"
-
-            return
-                
-
-        if self._joystick is None:
-            try:
-                self._joystick = pygame.joystick.Joystick(0)
-                self._joystick.init()
-                self._gamepad_name = self._joystick.get_name()
-            except Exception:
-                self._joystick = None
-                self._gamepad_name = "None"
-
-    def _gamepad_input(self) -> Optional[Tuple[float, float]]:
-        if self._joystick is None:
-            return None
-        
-        try:
-            pygame.event.pump()
-
-            rudder_axis = self._joystick.get_axis(AXIS_RUDDER)
-
-            if abs(rudder_axis) < STICK_DZ:
-                rudder_axis = 0.0
-
-            n_axes = self._joystick.get_numaxes()
-            rt = self._joystick.get_axis(AXIS_THROTTLE_RT) if n_axes > AXIS_THROTTLE_RT else -1.0
-            lt = self._joystick.get_axis(AXIS_THROTTLE_LT) if n_axes > AXIS_THROTTLE_LT else -1.0
-
-            rt_n = max(0.0, (rt + 1.0) / 2.0)
-            lt_n = max(0.0, (lt + 1.0) / 2.0)
-
-            if rt_n < TRIGGER_DZ:
-                rt_n = 0.0
-
-            if lt_n < TRIGGER_DZ:
-                lt_n = 0.0
-
-            throttle = (rt_n - lt_n) * THROTTLE_MAX
-            rudder = rudder_axis * RUDDER_MAX
-
-            return throttle, rudder
-        
-        except Exception:
-            self._joystick = None
-            self._gamepad_name = "None"
-            
-            return None
         
     def _poll(self) -> None:
-        self._refresh_gamepad()
+        raw = self._gamepad.poll()
 
-        if self._joystick is not None:
-            result = self._gamepad_input()
-            throttle, rudder = result if result is not None else (0.0, 0.0)
+        if raw is not None:
+            control = self._mapper.map(raw)
+            throttle, rudder = control.throttle, control.rudder
+
+            for mode in control.mode_requests:
+                self.ctrl.set_mode(mode)
 
         else:
+            self._mapper.reset()
             throttle, rudder = self._ramped_keyboard_inputs()
 
         if self._current_mode == MODE_MANUAL:
@@ -353,7 +282,7 @@ class ManualControlFrame(BaseFrame):
 
         self._draw_bars()
 
-        gp_text = (f"{self._gamepad_name}" if self._joystick else "Keyboard Control")
+        gp_text = self._gamepad.name if self._gamepad.connected else "Keyboard Input"
         self.lbl_gamepad.config(text = gp_text)
 
         course, valid = self.ctrl.get_course_status()
@@ -370,7 +299,7 @@ class ManualControlFrame(BaseFrame):
             self.lbl_course_readout.config(text = text, fg = color)
 
         else:
-            self.lbl_course_readout.config(text = "--.-°", fg = self.theme["fg_dim"])
+            self.lbl_course_readout.config(text = "---°", fg = self.theme["fg_dim"])
 
         throttle_ap, thr_valid = self.ctrl.get_throttle_status()
 
@@ -389,7 +318,7 @@ class ManualControlFrame(BaseFrame):
             self.lbl_thr_ap_readout.config(text = "--%", fg = self.theme["fg_dim"])
 
         self.root.after(POLL_MS, self._poll)
-
+        
     def _draw_bars(self) -> None:
         if not hasattr(self, "throttle_canvas"):
             return
