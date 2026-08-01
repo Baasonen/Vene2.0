@@ -242,7 +242,7 @@ void ledTask(void* pv)
             if (!dBlink || wasCritErr)
             {
                 bottomBlink.start(CRGB::White, 100, 150, 1600); 
-                heartbeatStarted = true;
+                dBlink = true;
             }
 
             leds[1] = bottomBlink.update();
