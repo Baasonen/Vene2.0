@@ -199,14 +199,24 @@ void diagTask(void* pv)
 }
 
 void ledTask(void* pv)
-{   
-    uint32_t lastLedTime = 0;
-
+{
     // LED 0: Top
     // LED 1: Bottom
+
+    static LedDoubleFlash bottomBlink;
+    static LedPulse bottomCritBlink;
+    static LedPulse topSlowBlink;
+
+    static bool dBlink = false;
+    static bool critBlinkStarted = false;
+    static bool topBlinkStarted = false;
+    static bool critErr = false;
+    static bool wasCritErr = false;
+    static int lastMode = -1;
+
     for(;;)
     {
-        vTaskDelay(100);
+        vTaskDelay(pdMS_TO_TICKS(10));
 
         SystemStatus status = {};
 
@@ -217,34 +227,68 @@ void ledTask(void* pv)
             xSemaphoreGive(stateMutex);
         }
 
-        if (millis() - lastLedTime > 2000)
+        if (critErr)
         {
-            leds[1] = CRGB::White;
+            if (!critBlinkStarted || !wasCritErr)
+            {
+                bottomCritBlink.start(CRGB::Red, 0, 100, 100); // fast blink, 5 Hz
+                critBlinkStarted = true;
+            }
 
-            lastLedTime = millis();
+            leds[1] = bottomCritBlink.update();
         }
         else
         {
-            leds[1] = CRGB::Black;
+            if (!dBlink || wasCritErr)
+            {
+                bottomBlink.start(CRGB::White, 100, 150, 1600); 
+                heartbeatStarted = true;
+            }
+
+            leds[1] = bottomBlink.update();
         }
 
-        switch(status.mode)
-        {
-            case 0:
-                leds[0] = CRGB::Red;
+        wasCritErr = critErr;
 
+        if (status.mode != lastMode)
+        {
+            topBlinkStarted = false; // reset blink phase on mode change
+        }
+
+        switch (status.mode)
+        {
+            case 0: // slow blink
+                if (!topBlinkStarted)
+                {
+                    topSlowBlink.start(CRGB::Red, 0, 1500, 500); // 2s period
+                    topBlinkStarted = true;
+                }
+
+                leds[0] = topSlowBlink.update();
                 break;
 
             case 1:
-                leds[0] = CRGB::Blue;
+                leds[0] = CRGB::Red;
+                break;
 
+            case 2:
+                leds[0] = CRGB::Green;
+                break;
+
+            case 3:
+                leds[0] = CRGB::Blue;
+                break;
+
+            case 4:
+                leds[0] = CRGB::Pink;
                 break;
 
             default:
-                leds[0] = CRGB::Green;
-
+                leds[0] = CRGB::Black;
                 break;
         }
+
+        lastMode = status.mode;
 
         FastLED.show();
     }
