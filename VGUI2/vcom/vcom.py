@@ -12,10 +12,12 @@ from vcom.protocol import (
     ACK_FORMAT, CONTROL_FORMAT, FAST_FORMAT, HOME_FORMAT,
     RESET_ERRORS_FORMAT, ROUTE_FORMAT, SLOW_FORMAT, TIME_DATA_FORMAT,
     COURSE_SET_FORMAT, COURSE_DATA_FORMAT, THR_SET_FORMAT, THR_DATA_FORMAT,
+    BE_TELE_FORMAT,
 
     PKT_CONTROL, PKT_DATA, PKT_HOME_DATA, PKT_HOME_REQ, PKT_HOME_SET,
     PKT_RESET_ERRORS, PKT_TELE_FAST, PKT_TELE_SLOW, PKT_TIME_DATA, PKT_TIME_REQ,
     PKT_WP_DATA, PKT_COURSE_SET, PKT_COURSE_DATA, PKT_THR_SET, PKT_THR_DATA,
+    PKT_BE_TELE,
 
     HOME_RETRIES, HOME_TIMEOUT_S,
     COURSE_RETRIES, COURSE_TIMEOUT_S, COURSE_SCALE, COURSE_REQ,
@@ -86,6 +88,7 @@ class Controller:
 
         self._t.register_handler(PKT_TELE_FAST, self._handle_fast_tele)
         self._t.register_handler(PKT_TELE_SLOW, self._handle_slow_tele)
+        self._t.register_handler(PKT_BE_TELE, self._handle_be_tele)
         self._t.register_handler(PKT_DATA, self._handle_ack)
         self._t.register_handler(PKT_HOME_DATA, self._handle_home_data)
         self._t.register_handler(PKT_TIME_REQ, self._handle_time_req)
@@ -380,9 +383,11 @@ class Controller:
 
     # Pakcet handlers
     def _handle_fast_tele(self, payload: bytes) -> None:
-        _, heading, mode, target_idx = struct.unpack(FAST_FORMAT, payload)
+        _, heading_raw, mode, target_idx = struct.unpack(FAST_FORMAT, payload)
 
         self._t.update_lora_t()
+
+        heading = heading_raw / 100.0
 
         with self._data_lock:
             old_mode = self._telemetry_data["mode"]
@@ -401,21 +406,30 @@ class Controller:
             self.on_mode_change(mode)
 
     def _handle_slow_tele(self, payload: bytes) -> None:
-        _, battery, hdop_raw, signal_raw, new_error, lat, lon = struct.unpack(SLOW_FORMAT, payload)
+        _, battery, hdop_raw, signal_raw, lat_raw, lon_raw = struct.unpack(SLOW_FORMAT, payload)
+
+        self._t.update_lora_t()
+
+        lat = lat_raw / 1e7
+        lon = lon_raw / 1e7
+
+        with self._data_lock:
+            self._telemetry_data.update({
+                "battery": battery,
+                "hdop": hdop_raw / 10.0,
+                "signal": signal_raw - 128,
+                "lat" : lat,
+                "lon" : lon,
+            })
+
+    def _handle_be_tele(self, payload: bytes) -> None:
+        _, c1, c2, c3, new_error = struct.unpack(BE_TELE_FORMAT, payload)
 
         self._t.update_lora_t()
 
         with self._data_lock:
             old_error = self._telemetry_data["error"]
-
-            self._telemetry_data.update({
-                "battery": battery,
-                "hdop": hdop_raw / 10.0,
-                "signal": signal_raw - 128,
-                "error": new_error,
-                "lat" : lat,
-                "lon" : lon,
-            })
+            self._telemetry_data["error"] = new_error
 
         if new_error != old_error and self.on_error_change:
             new_bits = {b for b in range(32) if (new_error >> b & 1) and not (old_error >> b & 1)}

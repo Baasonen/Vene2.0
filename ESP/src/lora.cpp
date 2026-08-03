@@ -3,9 +3,20 @@
 #include "errors.h"
 #include "packet_handlers.h"
 
+#define LORA_TIMEOUT_MS 20000
+
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
 static int8_t lastRSSI = 0;
 static uint32_t txStartTime = 0;
+
+#define DUTY_CYCLE_WINDOW_MS 60000UL  // 60s
+#define DUTY_CYCLE_LIMIT_PCT 10.0f
+static uint32_t dutyWindowStart = 0;
+static uint32_t dutyAirtimeMs = 0;
+
+#define SLOW_TELE_PERIOD_MS 5700
+#define FAST_TELE_PERIOD_MS 2000
+#define BE_TELE_PERIOD_MS 10300
 
 enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
 static volatile LoRaDir loraDir = LORA_DIR_RX;
@@ -38,8 +49,23 @@ void beginTransmit(uint8_t* data, size_t len)
 
 void completeTransmit()
 {
+    dutyAirtimeMs += millis() - txStartTime;
     loraDir = LORA_DIR_RX;
     radio.startReceive();
+}
+
+void printDutyCycle()
+{
+    uint32_t elapsed = millis() - dutyWindowStart;
+    if (elapsed < DUTY_CYCLE_WINDOW_MS) {return;}
+
+    float dutyPct = (dutyAirtimeMs * 100.0f) / elapsed;
+
+    Serial.printf("[LORA] Duty cycle: %.2f%% of %.0f%% limit (%lu ms TX / %lu ms window)\n",
+                  dutyPct, DUTY_CYCLE_LIMIT_PCT, dutyAirtimeMs, elapsed);
+
+    dutyWindowStart = millis();
+    dutyAirtimeMs = 0;
 }
 
 void resetLoRa()
@@ -174,11 +200,12 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
     }
 }
 
-void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
+void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele)
 {   
     static uint32_t lastTimeReq = 0;
+    static uint32_t lastErrorCode = 0;
 
-    if (!globalState.status.timeSet && (millis() - lastTimeReq) > 2000)
+    if (!globalState.status.timeSet && (millis() - lastTimeReq) > 6500)
     {
         Serial.println("[TIME] Requesting current time");
         uint8_t timeReqPacket = PKT_TIME_REQ;
@@ -187,14 +214,14 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
         return;
     }
     
-    if (millis() - lastFastTele > 900)
+    if (millis() - lastFastTele > FAST_TELE_PERIOD_MS)
     {
         telemetryFastPacket fastPkt = {};
         fastPkt.packetID = PKT_TELE_FAST;
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
-            fastPkt.heading = globalState.sensors.mag.heading;
+            fastPkt.heading = (uint16_t)(globalState.sensors.mag.heading * 100);
             fastPkt.targetIdx = globalState.status.targetWaypoint;
             fastPkt.mode = globalState.status.mode;
             
@@ -207,7 +234,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
         }
     }
 
-    if (millis() - lastSlowTele > 3100)
+    if (millis() - lastSlowTele > SLOW_TELE_PERIOD_MS)
     {   
         telemetrySlowPacket slowPkt = {};
         slowPkt.packetID = PKT_TELE_SLOW;
@@ -216,16 +243,41 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele)
         {
             slowPkt.batt = globalState.status.battery;
             slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
-            slowPkt.errorCode = globalState.status.errorCode;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
-            slowPkt.lat = globalState.sensors.gps.lat;
-            slowPkt.lon = globalState.sensors.gps.lon;
+            slowPkt.lat = (int32_t)(globalState.sensors.gps.lat * 1e7);
+            slowPkt.lon = (int32_t)(globalState.sensors.gps.lon * 1e7);
 
             xSemaphoreGive(stateMutex);
 
             beginTransmit((uint8_t*)&slowPkt, sizeof(slowPkt));
             lastSlowTele = millis();
             //Serial.println("[LORA] Slow tele sent");
+
+            return;
+        }
+    }
+
+    bool sendBE = false;
+    beTelemetryPacket bePkt = {};
+    bePkt.packetID = PKT_BE_TELE;
+
+    if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+    {
+        bePkt.errorCode = globalState.status.errorCode;
+        bePkt.c1 = (uint8_t)100;
+
+        xSemaphoreGive(stateMutex);
+
+        sendBE = ((millis() - lastBETele) > BE_TELE_PERIOD_MS) || (bePkt.errorCode != lastErrorCode);
+
+        if (sendBE)
+        {
+            beginTransmit((uint8_t*)&bePkt, sizeof(beTelemetryPacket));
+
+            lastBETele = millis();
+            lastErrorCode = bePkt.errorCode;
+
+            return;
         }
     }
 }
@@ -262,11 +314,14 @@ void commsTask(void* pvParameters)
 
     uint32_t lastFastTele = 0;
     uint32_t lastSlowTele = 0;
+    uint32_t lastBETele = 0;
     uint32_t lastPacketReceivedTime = millis();
 
     static Route tempRoute = {};
     static bool wpReceived[WP_AMMNT_LIM] = {false};
     static uint8_t receivedCount = 0;
+
+    dutyWindowStart = millis();
 
     for (;;)
     {
@@ -304,10 +359,12 @@ void commsTask(void* pvParameters)
 
         if (!isUploading && loraDir == LORA_DIR_RX && uxSemaphoreGetCount(rxPacketSem) == 0)
         {
-            txTask(lastFastTele, lastSlowTele);
+            txTask(lastFastTele, lastSlowTele, lastBETele);
         }
 
-        if ((millis() - lastPacketReceivedTime) > 10000)
+        printDutyCycle();
+
+        if ((millis() - lastPacketReceivedTime) > LORA_TIMEOUT_MS)
         {
             if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(5)) == pdTRUE)
             {

@@ -6,13 +6,17 @@ from typing import Dict, Tuple
 
 # Struct formats
 
-# Fast telemetry (downlink, ~5 Hz): position, heading, mode, target waypoint
-FAST_FORMAT = "<BfBB"
+# Fast telemetry (downlink): position, heading, mode, target waypoint
+FAST_FORMAT = "<BHBB"
 FAST_SIZE = struct.calcsize(FAST_FORMAT)
  
-# Slow telemetry (downlink, ~1 Hz): battery, HDOP, RSSI, error bitmask
-SLOW_FORMAT = "<BBBBIdd"
+# Slow telemetry (downlink): battery, HDOP, RSSI, error bitmask
+SLOW_FORMAT = "<BBBBii"
 SLOW_SIZE = struct.calcsize(SLOW_FORMAT)
+
+# BE telemetry (downlink): uint8_t packetID, uint8_t c1, uint8_t c2, uint8_t c3, uint32_t errorCode
+BE_TELE_FORMAT = "<BBBBI"
+BE_TELE_SIZE = struct.calcsize(BE_TELE_FORMAT)
  
 # Waypoint data (uplink): route_id, lat, lon, waypoint order, total count
 ROUTE_FORMAT = "<BBddBB"
@@ -74,6 +78,7 @@ PKT_COURSE_SET = 0x0D # U : Set or request (-1) target course
 PKT_COURSE_DATA = 0x0E # D : Currently set target course (for MODE_CRS)
 PKT_THR_SET = 0x11 # U : Set or request (-110) A/P throttle
 PKT_THR_DATA = 0x12 # D : Currently set A/P throttle
+PKT_BE_TELE = 0x13 # D : Battery cell voltages & error code
 PKT_UPLOAD_BEGIN = 0x0F
 
 # Modes
@@ -94,16 +99,16 @@ MODE_NAMES: Dict[int, str] ={
 
 # Retry / timeout limits
 
-MODE_TIMEOUT_S = 1.5 # Seconds to wait for mode-change ACK
+MODE_TIMEOUT_S = 3.5 # Seconds to wait for mode-change ACK
 MODE_RETRIES = 5
 
 ROUTE_TIMEOUT_S = 2.0 # Seconds to wait for each wp ACK
 ROUTE_RETRIES = 5
 
-HOME_TIMEOUT_S = 3.5 # Seconds to wait for a home set or home data ACK
+HOME_TIMEOUT_S = 4.2 # Seconds to wait for a home set or home data ACK
 HOME_RETRIES = 5
 
-LORA_STALE_S = 5.0 # Time limit for LoRa timeout
+LORA_STALE_S = 10.0 # Time limit for LoRa timeout
 WIFI_STALE_S = 2.0 # Time limit for WiFi timeout
 
 COURSE_SCALE = 1 # 1 for whole deg res, 10 for 1/10 deg resolution

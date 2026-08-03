@@ -163,7 +163,7 @@ void diagTask(void* pv)
 
     for(;;)
     {
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(10000));
 
         SensorData sensors = {};
         SystemStatus status = {};

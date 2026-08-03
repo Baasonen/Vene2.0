@@ -4,12 +4,6 @@
 static TinyGPSPlus gps;
 static HardwareSerial gpsSerial(2);
 
-void ubxEnableSBAS(Stream &port);
-void ubxSaveConfig(Stream &port);
-
-void ubxClearConfig(Stream &port);
-void ubxColdReset(Stream &port);
-
 int GPSInit()
 {
     gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN);

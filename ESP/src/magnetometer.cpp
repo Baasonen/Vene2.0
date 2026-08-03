@@ -46,6 +46,7 @@ MagData getMagnetometer()
             if (magInit()) {lastValidTime = millis();}
             else {lastValidTime = millis();}
         }
+        
         return lastValid;
     }
 

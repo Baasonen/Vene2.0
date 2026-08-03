@@ -12,12 +12,12 @@ from vcom.protocol import (
     ACK_FORMAT, ACK_SIZE,
 
     FAST_SIZE, HOME_SIZE, COURSE_DATA_SIZE, THR_DATA_SIZE,
-    SLOW_SIZE, WIFI_HEARTBEAT_SIZE,
+    SLOW_SIZE, WIFI_HEARTBEAT_SIZE, BE_TELE_SIZE,
 
     MANUAL_FORMAT,
 
     PKT_DATA, PKT_HOME_DATA,PKT_COURSE_DATA, PKT_THR_DATA, PKT_MANUAL,
-    PKT_TELE_FAST, PKT_TELE_SLOW,
+    PKT_TELE_FAST, PKT_TELE_SLOW, PKT_BE_TELE,
     PKT_TIME_REQ, PKT_WIFI_HB, PKT_UPLOAD_BEGIN,
 
     LORA_STALE_S, WIFI_STALE_S,
@@ -58,6 +58,7 @@ class SerialTransport:
             PKT_HOME_DATA: HOME_SIZE,
             PKT_COURSE_DATA : COURSE_DATA_SIZE,
             PKT_THR_DATA : THR_DATA_SIZE,
+            PKT_BE_TELE: BE_TELE_SIZE,
             PKT_TIME_REQ: 1,
         }
 
@@ -207,6 +208,8 @@ class SerialTransport:
                             handler(payload)
 
                 except Exception:
+                    import traceback
+                    traceback.print_exc()
                     with self._state_lock:
                         self._connected = False
                     
@@ -240,4 +243,4 @@ class SerialTransport:
                 pkt = struct.pack(ACK_FORMAT, PKT_DATA, 254, 0)
                 self.write(pkt)
 
-            time.sleep(2)
+            time.sleep(4.6)

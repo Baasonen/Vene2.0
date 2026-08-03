@@ -19,3 +19,10 @@ int GPSInit();
 GPSData getGPS();
 
 void gpsInitAid(double lat, double lon, float altM, uint32_t unix);
+
+
+void ubxEnableSBAS(Stream &port);
+void ubxSaveConfig(Stream &port);
+
+void ubxClearConfig(Stream &port);
+void ubxColdReset(Stream &port);

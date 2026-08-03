@@ -75,7 +75,7 @@ void errorTask(void* pv)
         if (loopCounter % WI_SAMPLE_DIVIDER == 0)
         {
             waterLevel = readWaterIngressSensor();
-            Serial.println(waterLevel);
+            //Serial.println(waterLevel);
         }
         loopCounter++;
 

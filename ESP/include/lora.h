@@ -25,6 +25,7 @@
 #define PKT_WP_DATA 0x01
 #define PKT_TELE_FAST 0x02
 #define PKT_TELE_SLOW 0x03
+#define PKT_BE_TELE 0x13
 #define PKT_CONTROL 0x04
 #define PKT_RESET_ERRORS 0x07
 #define PKT_DATA 0x10
@@ -45,7 +46,7 @@
 struct telemetryFastPacket
 {
     uint8_t packetID; // 0x02
-    float heading;
+    uint16_t heading;
     uint8_t mode;
     uint8_t targetIdx; 
 };
@@ -56,9 +57,17 @@ struct telemetrySlowPacket
     uint8_t batt;
     uint8_t gps;
     uint8_t signalStrength;
+    int32_t lat;
+    int32_t lon;
+};
+
+struct beTelemetryPacket
+{   
+    uint8_t packetID;
+    uint8_t c1;
+    uint8_t c2;
+    uint8_t c3;
     uint32_t errorCode;
-    double lat;
-    double lon;
 };
 
 struct routePacket
