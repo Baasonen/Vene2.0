@@ -61,8 +61,10 @@ class TelemetryFrame(BaseFrame):
     def _refresh(self, telemetry: dict, connection: dict) -> None:
         pos, _, _ = self.widgets["POS"]
 
-        if telemetry["lat"] != 0:
+        if telemetry["lat"] != 0.0 and telemetry["lon"] != 0.0 and telemetry["hAcc"] < 10.0:
             pos.config(text=f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["fg"])
+        elif telemetry["lat"] != 0.0 and telemetry["lon"] != 0.0:
+            pos.config(text=f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["red"])
         else:
             pos.config(text = "NO GPS FIX", fg = self.theme["red"])
 

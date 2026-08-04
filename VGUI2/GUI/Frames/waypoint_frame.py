@@ -93,6 +93,7 @@ class WaypointFrame(BaseFrame):
 
         ttk.Button(self.move_bar, text="↑", width=3, command=self._move_up).pack(pady=(0, 2))
         ttk.Button(self.move_bar, text="↓", width=3, command=self._move_down).pack()
+        ttk.Button(self.move_bar, text = "✕", width = 3, command = self._delete_selected).pack(pady = (8, 0))
 
     def add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoints.append(coords)
@@ -177,6 +178,19 @@ class WaypointFrame(BaseFrame):
         self.waypoints[idx + 1], self.waypoints[idx] = self.waypoints[idx], self.waypoints[idx + 1]
         self._route_changed = True
         self.refresh(select = idx + 1)
+
+    def _delete_selected(self) -> None:
+        sel = self.listbox.curselection()
+
+        if not sel:
+            return
+
+        idx = sel[0]
+        del self.waypoints[idx]
+        self._route_changed = True
+
+        self._selected_idx = None
+        self.refresh()
 
     # Selection Highlight
     def _on_listbox_select(self, event = None) -> None:

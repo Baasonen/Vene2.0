@@ -222,7 +222,7 @@ class MapFrame(BaseFrame):
         if telemetry.get("mode") == MODE_COURSE:
             vlat, vlon = telemetry["lat"], telemetry["lon"]
 
-            if vlat != 0.0 and vlon != 0.0:
+            if vlat != 0.0 and vlon != 0.0 and telemetry.get("hAcc") < 10.0:
                 self.ctrl.set_course(self._bearing_to(vlat, vlon, lat, lon))
 
             return
