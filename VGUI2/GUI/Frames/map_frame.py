@@ -6,8 +6,10 @@ import tkintermapview
 from tkintermapview import map_widget as _tmv_map_widget
 import requests
 import os
+import math
 
 from GUI.base_frame import BaseFrame
+from vcom.protocol import MODE_COURSE
 
 # Fix for slow OpenSeaMap
 class _TimeoutRequests:
@@ -214,11 +216,28 @@ class MapFrame(BaseFrame):
             self.on_load_route(path)
 
     def _on_map_double_click(self, event) -> None:
-        if self.ctrl.get_telemetry_data().get("mode") == 4:
+        lat, lon = self.widget.convert_canvas_coords_to_decimal_coords(event.x, event.y)
+        telemetry = self.ctrl.get_telemetry_data()
+
+        if telemetry.get("mode") == MODE_COURSE:
+            vlat, vlon = telemetry["lat"], telemetry["lon"]
+
+            if vlat != 0.0 and vlon != 0.0:
+                self.ctrl.set_course(self._bearing_to(vlat, vlon, lat, lon))
+
             return
 
-        lat, lon = self.widget.convert_canvas_coords_to_decimal_coords(event.x, event.y)
         self.on_add_waypoint((lat, lon))
+
+    @staticmethod
+    def _bearing_to(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        dlambda = math.radians(lon2 - lon1)
+
+        x = math.sin(dlambda) * math.cos(phi2)
+        y = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(dlambda)
+
+        return (math.degrees(math.atan2(x, y)) + 360) % 360
 
     # Tile Server
     def set_tiles(self, is_dark: bool) -> None:
