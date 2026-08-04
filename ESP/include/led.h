@@ -1,13 +1,37 @@
 #pragma once
 
-#include <FastLED.h>
+#include <Arduino.h>
 
 #define LED_D_PIN 19
 #define NUMBER_LEDS 2
 
+struct CRGB
+{
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+
+    constexpr CRGB() = default;
+    constexpr CRGB(uint8_t red, uint8_t green, uint8_t blue) : r(red), g(green), b(blue) {}
+
+    bool operator==(const CRGB &o) const {return r == o.r && g == o.g && b == o.b;}
+    bool operator!=(const CRGB &o) const {return !(*this == o);}
+
+    static const CRGB Black;
+    static const CRGB White;
+    static const CRGB Red;
+    static const CRGB Green;
+    static const CRGB Blue;
+    static const CRGB Yellow;
+    static const CRGB Orange;
+    static const CRGB Purple;
+    static const CRGB Cyan;
+};
+
 extern CRGB leds[NUMBER_LEDS];
 
 void ledSetup();
+void ledShow();
 
 struct LedPulse
 {

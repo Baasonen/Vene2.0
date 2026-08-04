@@ -3,9 +3,11 @@
 #include "gps.h"
 #include "magnetometer.h"
 
-#define GPS_MAX_HDOP 1.5
 #define MAG_MIN_ACC 1
-#define WP_AMMNT_LIM 100
+#define WP_AMMNT_LIM 200
+
+#define GPS_MAX_HACC_M 10.0f
+#define GPS_WARN_HACC_M 4.5f
 
 struct wp
 {

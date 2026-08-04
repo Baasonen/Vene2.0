@@ -22,7 +22,6 @@
 #include "led.h"
 
 #define WDT_TIMEOUT 5
-
 #define HOME_TRESHOLD 5
 
 Preferences prefs;
@@ -281,7 +280,7 @@ void ledTask(void* pv)
                 break;
 
             case 4:
-                leds[0] = CRGB::Pink;
+                leds[0] = CRGB::Purple;
                 break;
 
             default:
@@ -291,7 +290,7 @@ void ledTask(void* pv)
 
         lastMode = status.mode;
 
-        FastLED.show();
+        ledShow();
     }
 }
 

@@ -53,11 +53,8 @@ class WaypointFrame(BaseFrame):
             self.parent, text = "Waypoints",
             font = ("Segoe UI", 10, "bold"), padx = 10, pady = 8,
             bg = self.theme["panel_bg"], fg = self.theme["fg"])
-        self.frame.pack(fill = "both", expand = True, pady = (0, 10))   # CHANGED: both+expand
+        self.frame.pack(fill = "both", expand = True, pady = (0, 10))
 
-        # Bottom-anchored controls — pack these FIRST, with side="bottom",
-        # in bottom-to-top visual order, so they always reserve their space
-        # before the list gets whatever's left.
         self.ctrl_bar = tk.Frame(self.frame, bg = self.theme["panel_bg"])
         self.ctrl_bar.pack(side = "bottom", fill = "x", pady = (6, 0))
 
@@ -233,33 +230,49 @@ class WaypointFrame(BaseFrame):
         if len(self.waypoints) > 1:
             self._path = self.map_widget.set_path(self.waypoints, color = self.theme["accent"], width = 3)
 
-        self._update_lenght()
+        self._update_route_length()
+        self._update_home_distance(self.ctrl.get_telemetry_data(), self.ctrl.get_connection_status())
 
     def update(self, telemetry: dict, connection: dict) -> None:
         super().update(telemetry, connection)
 
         status, current, total = self.ctrl.get_upload_status()
-
         if self._prev_status == uploadStatus.UPLOADING and status == uploadStatus.DONE:
             self._route_changed = False
-
         self._prev_status = status
         self._refresh_progress(status, current, total)
 
-    def _update_lenght(self) -> None:
-        total_m = 0.0
+        self._update_home_distance(telemetry, connection)
 
-        for (lat1, lon1), (lat2, lon2) in zip(self.waypoints, self.waypoints[1:]):
-            total_m += _haversine_m(lat1, lon1, lat2, lon2)
+    def _update_route_length(self) -> None:
+        total_m = sum(
+            _haversine_m(lat1, lon1, lat2, lon2)
+            for (lat1, lon1), (lat2, lon2) in zip(self.waypoints, self.waypoints[1:])
+        )
 
         if not self.waypoints:
-            self.length_label.config(text = "Length: --")
-        
+            self._route_text = "Route Length: --"
         elif total_m < 1000:
-            self.length_label.config(text = f"Length: {total_m:.0f} m")
-
+            self._route_text = f"Route Length: {total_m:.0f} m"
         else:
-            self.length_label.config(text = f"Length: {total_m / 1000:.2f} km")
+            self._route_text = f"Route Length: {total_m / 1000:.2f} km"
+
+        self._refresh_length_label()
+
+    def _update_home_distance(self, telemetry: dict, connection: dict) -> None:
+        lat, lon = telemetry["lat"], telemetry["lon"]
+        home_lat, home_lon = connection["home_lat"], connection["home_lon"]
+
+        if connection["home_set"] and lat != 0.0 and lon != 0.0:
+            dist = _haversine_m(home_lat, home_lon, lat, lon)
+            self._home_text = f"Dist. To Home: {dist:.0f} m" if dist < 1000 else f"Dist. To Home: {dist / 1000:.2f} km"
+        else:
+            self._home_text = ""
+
+        self._refresh_length_label()
+
+    def _refresh_length_label(self) -> None:
+        self.length_label.config(text=f"{getattr(self, '_route_text', 'Route Length: --')}   {getattr(self, '_home_text', '')}")
 
     def _refresh_progress(self, status: uploadStatus, current: int, total: int) -> None:
         if status == uploadStatus.UPLOADING:
@@ -267,21 +280,19 @@ class WaypointFrame(BaseFrame):
             self.progress_var.set(pct)
             self._set_status(f"Uploading {current} / {total}", "uploading")
             return
-        
+
         if status == uploadStatus.FAILED:
             pct = int(current / total * 100) if total else 0
             self.progress_var.set(pct)
             self._set_status(f"Upload Failed ({current} / {total})", "error")
             return
-        
+
         if not self.waypoints:
             self.progress_var.set(0)
             self._set_status("No Route", "idle")
-
         elif self._route_changed:
             self.progress_var.set(0)
             self._set_status("Current Route Not Uploaded", "dirty")
-
         else:
             self.progress_var.set(100)
             self._set_status(f"Uploaded ({total} Waypoints)", "done")

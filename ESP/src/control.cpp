@@ -31,9 +31,11 @@ void turnRudder(int8_t angle)
 
 void setThrottle(int8_t throttle)
 {
-    if (abs(throttle) < 10) {throttle = 0;}
+    if (abs(throttle) < 5) {throttle = 0;}
 
-    uint32_t throttleMS = (throttle * ESC_RANGE) + ESC_NEUTRAL;
+    if (throttle < 0) {throttle /= ESC_REVERSE_DIV;}
+
+    uint32_t throttleMS = (uint32_t)((float)(throttle * ESC_RANGE) + ESC_NEUTRAL);
     motor.writeMicroseconds(throttleMS);
 }
 

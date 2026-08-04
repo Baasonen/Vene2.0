@@ -4,7 +4,6 @@
 
 #define GPSRXPIN 5
 #define GPSTXPIN 18
-#define GPS_MAX_HACC_M 5.0f
 
 typedef struct 
 {
