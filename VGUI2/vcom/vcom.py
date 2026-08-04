@@ -1,12 +1,10 @@
-
-VERSION = 2.2
+VERSION = 2.3
 
 import struct
 import threading
 import time
 
-from typing import Callable, Dict, List, Optional, Set, Tuple
-
+from typing import Callable, Dict, List, Optional, Set, Tuple, Any
 from vcom.comms import SerialTransport
 from vcom.protocol import (
     ACK_FORMAT, CONTROL_FORMAT, FAST_FORMAT, HOME_FORMAT,
@@ -27,6 +25,8 @@ from vcom.protocol import (
 
     uploadStatus, load_error_defs,
 )
+
+_NO_PENDING = object()
 
 class Controller:
 
@@ -81,6 +81,14 @@ class Controller:
 
         self._course_data_event = threading.Event()
         self._throttle_data_event = threading.Event()
+
+        self._course_lock = threading.Lock()
+        self._course_req_event = threading.Event()
+        self._course_pending: Any = _NO_PENDING
+
+        self._throttle_lock = threading.Lock()
+        self._throttle_req_event = threading.Event()
+        self._throttle_pending: Any = _NO_PENDING
         
         self._lora_was_online: bool = False
 
@@ -97,6 +105,8 @@ class Controller:
 
         self._t.start()
         threading.Thread(target = self._lora_monitor, daemon = True).start()
+        threading.Thread(target = self._course_tx_worker, daemon = True).start()
+        threading.Thread(target = self._throttle_tx_worker, daemon = True).start()
 
     def stop(self) -> None:
         self._t.stop()
@@ -202,28 +212,28 @@ class Controller:
             print("[CTRL] LoRa offline")
             return 
         
-        threading.Thread(target = self._set_course_task, args = (heading_deg,), daemon = True).start()
+        self._queue_course(heading_deg)
 
     def request_course(self) -> None:
         if not self._t.lora_online:
             print("[CTRL] LoRa offline")
             return
         
-        threading.Thread(target = self._set_course_task, args = (None,), daemon = True).start()
+        self._queue_course(None)
 
     def set_throttle(self, throttle: float) -> None:
         if not self._t.lora_online:
             print("[CTRL] LoRa offline")
             return
 
-        threading.Thread(target = self._set_throttle_task, args = (throttle, ), daemon = True).start()
+        self._queue_throttle(throttle)
 
     def request_throttle(self) -> None:
         if not self._t.lora_online:
             print("[CTRL] LoRa offline")
             return
 
-        threading.Thread(target = self._set_throttle_task, args = (None, ), daemon = True).start()
+        self._queue_throttle(None)
 
     # Worker tasks
     def _set_mode_task(self, mode: int) -> None:
@@ -343,7 +353,28 @@ class Controller:
         pkt = struct.pack(RESET_ERRORS_FORMAT, PKT_RESET_ERRORS)
         self._t.write(pkt)
 
-    def _set_course_task(self, heading_deg: Optional[float]) -> None:
+    def _queue_course(self, heading_deg: Optional[float]) -> None:
+        with self._course_lock:
+            self._course_pending = heading_deg
+
+        self._course_req_event.set()
+
+    def _course_tx_worker(self) -> None:
+        while self._t.running:
+            if not self._course_req_event.wait(timeout = 5.0):
+                continue
+
+            with self._course_lock:
+                heading_deg = self._course_pending
+                self._course_pending = _NO_PENDING
+                self._course_req_event.clear()
+
+            if heading_deg is _NO_PENDING:
+                continue
+
+            self._send_course(heading_deg)
+
+    def _send_course(self, heading_deg: Optional[float]) -> None:
         is_req = heading_deg is None
         raw = COURSE_REQ if is_req else int(round(heading_deg * COURSE_SCALE)) % (360 * COURSE_SCALE)
         pkt = struct.pack(COURSE_SET_FORMAT, PKT_COURSE_SET, raw)
@@ -362,7 +393,27 @@ class Controller:
             label = "Request" if is_req else "Set"
             print(f"[CRS] {label} timeout attempt {attempt} / {COURSE_RETRIES}")
 
-    def _set_throttle_task(self, throttle: Optional[float]) -> None:
+    def _queue_throttle(self, throttle: Optional[float]) -> None:
+        with self._throttle_lock:
+            self._throttle_pending = throttle
+        self._throttle_req_event.set()
+
+    def _throttle_tx_worker(self) -> None:
+        while self._t.running:
+            if not self._throttle_req_event.wait(timeout = 5.0):
+                continue
+
+            with self._throttle_lock:
+                throttle = self._throttle_pending
+                self._throttle_pending = _NO_PENDING
+                self._throttle_req_event.clear()
+
+            if throttle is _NO_PENDING:
+                continue
+
+            self._send_throttle(throttle)
+
+    def _send_throttle(self, throttle: Optional[float]) -> None:
         is_req = throttle is None
         raw = THR_REQ if is_req else int (round(max(-100, min(100, throttle))))
         pkt = struct.pack(THR_SET_FORMAT, PKT_THR_SET, raw)
@@ -518,8 +569,8 @@ class Controller:
                 threading.Thread(target = self._request_home_task, daemon = True).start()
 
             if not self._lora_was_online and now_online:
-                threading.Thread(target = self._set_course_task, args = (None,), daemon = True).start()
-                threading.Thread(target = self._set_throttle_task, args = (None, ), daemon = True).start()
+                self._queue_course(None)
+                self._send_throttle(None)
 
             self._lora_was_online = now_online
             time.sleep(0.5)

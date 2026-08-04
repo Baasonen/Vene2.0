@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from GUI.gamepad import RawGamepadState
 
@@ -26,21 +26,29 @@ class ControllerProfile:
 
     button_mode_map: Dict[int, int] = field(default_factory = dict)
 
+    dpad_hat: Optional[int] = None # Hat idx
+    course_step_deg: float = 5.0 # Deg per left / right press
+    throttle_step_pct: float = 5.0 # % per up / down press
+
 # Result of raw poll
 @dataclass
 class ControlInput:
     throttle: float
     rudder: float
     mode_requests: List[int]
+    course_step: float = 0.0
+    throttle_ap_step: float = 0.0
 
 # Translate RawGamepadState -> ControlInput for specific ControllerProfile
 class ControllerMapper:
     def __init__(self, profile: ControllerProfile):
         self.profile = profile
         self._button_states: Dict[int, bool] = {}
+        self._hat_state: Tuple[int, int] = (0, 0)
 
     def reset(self) -> None:
         self._button_states.clear()
+        self._hat_state = (0, 0)
 
     def map(self, raw: RawGamepadState) -> ControlInput:
         p = self.profile
@@ -65,8 +73,10 @@ class ControllerMapper:
             throttle = 0.0
 
         mode_requests = self._poll_mode_buttons(raw)
+        course_step, throttle_ap_step = self._poll_dpad(raw)
 
-        return ControlInput(throttle = throttle, rudder = rudder, mode_requests = mode_requests)
+        return ControlInput(throttle = throttle, rudder = rudder, mode_requests = mode_requests,
+                            course_step = course_step, throttle_ap_step = throttle_ap_step)
 
     @staticmethod
     def _axis_value(raw: RawGamepadState, axis: int, deadzone: float) -> float:
@@ -84,6 +94,26 @@ class ControllerMapper:
         normalized = max(0.0, (raw.axes[axis] + 1.0) / 2.0)
         return 0.0 if normalized < deadzone else normalized
 
+    def _poll_dpad(self, raw: RawGamepadState) -> Tuple[float, float]:
+        p = self.profile
+        course_step = 0
+        throttle_ap_step = 0.0
+
+        if p.dpad_hat is None or p.dpad_hat >= len(raw.hats):
+            self._hat_state = (0, 0)
+            return course_step, throttle_ap_step
+
+        x, y, = raw.hats[p.dpad_hat]
+        prev_x, prev_y = self._hat_state
+
+        if x != prev_x and x != 0:
+            course_step = p.course_step_deg if x > 0 else -p.course_step_deg
+
+        if y != prev_y and y != 0:
+            throttle_ap_step = p.throttle_step_pct if y > 0 else -p.throttle_step_pct
+
+        self._hat_state = (x, y)
+        return course_step, throttle_ap_step
 
     def _poll_mode_buttons(self, raw: RawGamepadState) -> List[int]:
         requests: List[int] = []
@@ -123,6 +153,10 @@ def make_xbox_profile() -> ControllerProfile:
             BUTTON_Y: MODE_AUTO,
             BUTTON_X: MODE_COURSE,
         },
+
+        dpad_hat = 0,
+        course_step_deg = 5.0,
+        throttle_step_pct = 5.0,
     )
 
 # Example profile for 2 sticks and no triggers

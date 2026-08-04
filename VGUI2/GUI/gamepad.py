@@ -1,7 +1,7 @@
 # Gamepad hw layer, mapping in control_mapping.py
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 try:
     import pygame
@@ -13,6 +13,7 @@ except ImportError:
 class RawGamepadState:
     axes: List[float] = field(default_factory = list)
     buttons: List[bool] = field(default_factory = list)
+    hats: List[Tuple[int, int]] = field(default_factory = list)
     name: str = "None"
 
 class GamepadInput:
@@ -67,10 +68,11 @@ class GamepadInput:
         try:
             axes = [self._joystick.get_axis(i) for i in range(self._joystick.get_numaxes())]
             buttons = [bool(self._joystick.get_button(i)) for i in range(self._joystick.get_numbuttons())]
+            hats = [self._joystick.get_hat(i) for i in range(self._joystick.get_numhats())]
 
         except Exception:
             self._joystick = None
             self._name = "None"
             return None
 
-        return RawGamepadState(axes = axes, buttons = buttons, name = self._name)
+        return RawGamepadState(axes = axes, buttons = buttons, hats = hats, name = self._name)

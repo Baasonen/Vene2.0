@@ -114,7 +114,7 @@ WIFI_STALE_S = 2.0 # Time limit for WiFi timeout
 COURSE_SCALE = 1 # 1 for whole deg res, 10 for 1/10 deg resolution
 COURSE_REQ = -1
 
-COURSE_TIMEOUT_S = 2.0
+COURSE_TIMEOUT_S = 1.8
 COURSE_RETRIES = 10
 
 THR_REQ = -110

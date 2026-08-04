@@ -244,6 +244,17 @@ class ManualControlFrame(BaseFrame):
         self.ctrl.set_throttle(throttle)
         self.thr_ap_entry.delete(0, tk.END)
 
+    def _nudge_course(self, delta: float) -> None:
+        course, valid = self.ctrl.get_course_status()
+        base = course if valid else 0.0
+
+        self.ctrl.set_course((base + delta) % 360)
+
+    def _nudge_throttle_ap(self, delta: float) -> None:
+        throttle, valid = self.ctrl.get_throttle_status()
+        base = throttle if valid else 0.0
+
+        self.ctrl.set_throttle(max(-100.0, min(100.0, base + delta)))
 
     @staticmethod
     def _step_toward(current: float, target: float, max_step: float) -> float:
@@ -264,6 +275,12 @@ class ManualControlFrame(BaseFrame):
 
             for mode in control.mode_requests:
                 self.ctrl.set_mode(mode)
+
+            if control.course_step:
+                self._nudge_course(control.course_step)
+
+            if control.throttle_ap_step:
+                self._nudge_throttle_ap(control.throttle_ap_step)
 
         else:
             self._mapper.reset()
