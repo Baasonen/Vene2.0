@@ -16,7 +16,7 @@ static uint32_t dutyAirtimeMs = 0;
 
 #define SLOW_TELE_PERIOD_MS 5700
 #define FAST_TELE_PERIOD_MS 2000
-#define BE_TELE_PERIOD_MS 10300
+#define BE_TELE_PERIOD_MS 15300
 
 enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
 static volatile LoRaDir loraDir = LORA_DIR_RX;
@@ -242,13 +242,12 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
         {
             slowPkt.batt = globalState.status.battery;
-            slowPkt.gps = (uint8_t)(globalState.sensors.gps.hdop * 10);
+            slowPkt.gps = (uint8_t)(min((u_int)(globalState.sensors.gps.hAccM * 10), (u_int)UINT8_MAX));
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
             slowPkt.lat = (int32_t)(globalState.sensors.gps.lat * 1e7);
             slowPkt.lon = (int32_t)(globalState.sensors.gps.lon * 1e7);
 
             xSemaphoreGive(stateMutex);
-
             beginTransmit((uint8_t*)&slowPkt, sizeof(slowPkt));
             lastSlowTele = millis();
             //Serial.println("[LORA] Slow tele sent");

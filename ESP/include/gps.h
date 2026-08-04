@@ -1,17 +1,22 @@
 #pragma once
 
-#include <TinyGPS++.h>
+#include <stdint.h>
 
 #define GPSRXPIN 5
 #define GPSTXPIN 18
+#define GPS_MAX_HACC_M 5.0f
 
 typedef struct 
 {
-    double lat, lon;
-    float hdop;
-    int satellites;
-    double speedKMH;
-    uint32_t time;
+    double lat;
+    double lon;
+    float speedKMH;
+    float headingDeg;
+    float hAccM;
+    uint8_t fixType;
+    uint8_t satellites;
+    uint32_t unixTime;
+    bool utcTimeValid;
     bool valid;
 } GPSData;
 
@@ -19,10 +24,3 @@ int GPSInit();
 GPSData getGPS();
 
 void gpsInitAid(double lat, double lon, float altM, uint32_t unix);
-
-
-void ubxEnableSBAS(Stream &port);
-void ubxSaveConfig(Stream &port);
-
-void ubxClearConfig(Stream &port);
-void ubxColdReset(Stream &port);

@@ -7,7 +7,7 @@ class TelemetryFrame(BaseFrame):
     METRICS = [
         ("POS", "GPS", "—, —"),
         ("HDG", "Heading", "—°"),
-        ("GPS", "GPS HDOP", "—"),
+        ("GPS", "GPS HACC", "m"),
         ("MAG", "Mag Accuracy", "—"),
         ("NAV", "Target WP (idx)", "—"),
         ("BAT", "Battery", "—V"),
@@ -93,16 +93,16 @@ class TelemetryFrame(BaseFrame):
 
         gps, _, _ = self.widgets["GPS"]
 
-        if telemetry['hdop'] == 0.0:
-            gps_text = f"{telemetry['hdop']:.2f}"
+        if telemetry['hAcc'] == 0.0 or telemetry["hAcc"] == 25.5:
+            gps_text = "N/A"
             gps_color = self.theme["red"]
 
-        elif telemetry['hdop'] < 1.5:
-            gps_text = f"{telemetry['hdop']:.2f}"
+        elif telemetry['hAcc'] < 5.0:
+            gps_text = f"{telemetry['hAcc']:.1f} m"
             gps_color = self.theme["green"]
 
         else:
-            gps_text = f"{telemetry['hdop']:.2f}"
+            gps_text = f"{telemetry['hAcc']:.1f} m"
             gps_color = self.theme["orange"]
 
         gps.config(text = gps_text, fg = gps_color)

@@ -81,7 +81,7 @@ void errorTask(void* pv)
 
         setErrorIf(ERR_GPS_FAIL, debounce(gpsFailDb, !sensors.gps.valid));
         setErrorIf(ERR_MAG_FAIL, debounce(magFailDb, !sensors.mag.valid));
-        setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.hdop > GPS_MAX_HDOP));
+        setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.hAccM > GPS_MAX_HACC_M));
         setErrorIf(ERR_MAG_ACC_LOW, debounce(magAccDb, sensors.mag.accuracy < MAG_MIN_ACC));
         setErrorIf(ERR_BATT_LOW, debounce(battDb, status.battery < BATT_LOW_TRESHOLD));
 

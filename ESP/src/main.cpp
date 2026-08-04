@@ -180,13 +180,14 @@ void diagTask(void* pv)
         {
             Serial.println("\n--- VENE 2.0 ---");
             Serial.printf("Mode:    %u\n", status.mode);
-            Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HDOP: %.2f\n",
+            Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HACC: %.2f\n",
                           sensors.gps.valid ? "OK " : "BAD",
                           sensors.gps.lat, sensors.gps.lon,
-                          sensors.gps.satellites, sensors.gps.hdop);
+                          sensors.gps.satellites, sensors.gps.hAccM);
             Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
                           sensors.mag.valid ? "OK " : "BAD",
                           sensors.mag.heading, sensors.mag.accuracy);
+            Serial.printf("Time: [%s] %d\n", sensors.gps.utcTimeValid ? "GPS" : "REC", status.unixTime);
             Serial.printf("Comms:   LoRa TO: %s  WiFi TO: %s\n",
                           status.loraTimeout ? "YES" : "NO",
                           status.wifiTimeout ? "YES" : "NO");
