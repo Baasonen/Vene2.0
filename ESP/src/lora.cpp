@@ -5,7 +5,7 @@
 
 #define LORA_TIMEOUT_MS 20000
 
-SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
+SX1276 radio = new Module(LORA_CS, LORA_DIO0, LORA_RST, -1);
 static int8_t lastRSSI = 0;
 static uint32_t txStartTime = 0;
 
@@ -73,6 +73,10 @@ void resetLoRa()
     Serial.println("[LORA] Reseting due to TX stuck");
 
     detachInterrupt(digitalPinToInterrupt(LORA_DIO0));
+
+    SPI.end(); // Fix LoRa unable to recoved due to broken SPI state
+    delay(100);
+    SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, -1);
 
     int state = radio.begin(LORA_FREQ, LORA_BANDWIDTH, LORA_SF, LORA_CODING_RATE, RADIOLIB_SX127X_SYNC_WORD, LORA_POWER);
 
@@ -323,7 +327,7 @@ void commsTask(void* pvParameters)
     }
    
     radio.startReceive();
-    pinMode(LORA_DIO0, INPUT);
+    pinMode(LORA_DIO0, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
 
     uint32_t lastFastTele = 0;

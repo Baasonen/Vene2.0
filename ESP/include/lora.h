@@ -13,6 +13,7 @@
 #define LORA_MOSI 13
 #define LORA_CS 15
 #define LORA_DIO0 12
+#define LORA_RST 25
 
 #define LORA_FREQ 869.5
 #define LORA_BANDWIDTH 125.0
