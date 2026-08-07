@@ -261,12 +261,15 @@ GPSData getGPS()
     uint32_t now = millis();
     bool solFresh = (now - lastSolMs) < 1500;
     bool posFresh = (now - lastPollMs) < 1500;
-    bool accOk = data.hAccM < GPS_MAX_HACC_M;
+    bool accOk = data.hAccM < 10.0f;
+    data.accDegraded = true;
 
     if (solFixOk && solFresh && posFresh && accOk)
     {
         lastGoodFixMs = now;
         data.valid = true;
+
+        if (data.hAccM < 4.0f) {data.accDegraded = false;}
     }
 
     if ((now - lastGoodFixMs) > 3000) {data.valid = false;}

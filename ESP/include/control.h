@@ -14,7 +14,7 @@
 #define RUDDER_KI 0.03f
 #define RUDDER_I_LIM 40.0f
 
-#define ESC_RANGE 1.5f
+#define ESC_RANGE 2.0f
 #define ESC_REVERSE_DIV 4
 #define ESC_NEUTRAL 1500
 

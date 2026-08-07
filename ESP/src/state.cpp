@@ -2,47 +2,64 @@
 
 #include "errors.h"
 
+#define FAILSAFE_DELAY_MS 10000
+
+enum : uint8_t
+{
+    MODE_STOP = 0,
+    MODE_MANUAL = 1,
+    MODE_AP = 2,
+    MODE_RTH = 3,
+    MODE_CRS = 4,
+    MODE_COUNT
+};
+
+struct ModeRequirements
+{
+    bool reqWifi;
+    bool reqLora;
+    bool reqGPS;
+    bool reqGPSAcc;
+    bool reqMag;
+    bool reqHome;
+    bool reqRoute;
+};
+
+static const ModeRequirements MODE_REQS[MODE_COUNT] = {
+    {false, false, false, false, false, false, false}, // Stop
+    {true, false, false, false, false, false, false}, // Manual
+    {false, true, true, true, true, true, true}, // AP
+    {false, false, true, false, true, true, false}, // RTH
+    {false, true, false, false, true, false, false}, // CRS
+};
+
+static bool modeValid(uint8_t m)
+{
+    if (m >= MODE_COUNT) {return false;}
+    const ModeRequirements& r = MODE_REQS[m];
+
+    if (r.reqWifi && hasError(ERR_WIFI_TIMEOUT)) {return false;}
+    if (r.reqLora && hasError(ERR_LORA_TIMEOUT)) {return false;}
+    if (r.reqGPS && hasError(ERR_GPS_FAIL)) {return false;}
+    if (r.reqGPSAcc && hasError(ERR_GPS_ACC_LOW)) {return false;}
+    if (r.reqMag && (hasError(ERR_MAG_FAIL) || hasError(ERR_MAG_ACC_LOW))) {return false;}
+    if (r.reqHome && hasError(ERR_NO_HOME)) {return false;}
+    if (r.reqRoute && hasError(ERR_NO_ROUTE)) {return false;}
+
+    return true;
+}
+
 uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
 {
-    uint8_t mode = status.mode;
-
-    if (status.ctrlArmed && status.loraTimeout && (millis() - status.commTimeoutTriggerTime > 30000))
+    if (status.ctrlArmed && hasError(ERR_LORA_TIMEOUT) && 
+        (millis() - status.commTimeoutTriggerTime > FAILSAFE_DELAY_MS))
     {
-        bool navAvail = status.homeSet &&
-                        !hasError(ERR_GPS_FAIL) && !hasError(ERR_GPS_ACC_LOW) &&
-                        !hasError(ERR_MAG_FAIL) && !hasError(ERR_MAG_ACC_LOW);
-
-        return navAvail ? 3 : 0;
+        return modeValid(MODE_RTH) ? MODE_RTH : MODE_STOP;
     }
 
-    //TODO: Check correct logic
+    uint8_t requested = status.mode;
 
-    switch (mode)
-    {
-        case 1:
-            // Manual
-            if (status.wifiTimeout) {return 0;}
-            if (status.loraTimeout) {return 0;}
-            return 1;
+    if (modeValid(requested)) {return requested;}
 
-        case 2:
-            // Autopilot
-            if (hasError(ERR_LORA_TIMEOUT)) {return 0;}
-            if (hasError(ERR_GPS_ACC_LOW) || hasError(ERR_GPS_FAIL) || hasError(ERR_MAG_ACC_LOW) || hasError(ERR_MAG_FAIL)) {return 0;}
-            if (!status.routeReady) {return 0;}
-            return 2;
-        
-        case 3:
-            if (!status.homeSet) {return 0;}
-            if (hasError(ERR_GPS_ACC_LOW) || hasError(ERR_GPS_FAIL) || hasError(ERR_MAG_ACC_LOW) || hasError(ERR_MAG_FAIL)) {return 0;}
-            return 3;
-
-        case 4:
-            if (hasError(ERR_MAG_ACC_LOW) || hasError(ERR_MAG_FAIL)) {return 0;}
-            if (hasError(ERR_LORA_TIMEOUT)) {return 0;}
-            return 4;
-
-        default:
-            return 0;
-    }
+    return MODE_STOP;
 }

@@ -16,6 +16,7 @@ typedef struct
     uint8_t satellites;
     uint32_t unixTime;
     bool utcTimeValid;
+    bool accDegraded;
     bool valid;
 } GPSData;
 

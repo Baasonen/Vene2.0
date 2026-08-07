@@ -81,14 +81,14 @@ void errorTask(void* pv)
 
         setErrorIf(ERR_GPS_FAIL, debounce(gpsFailDb, !sensors.gps.valid));
         setErrorIf(ERR_MAG_FAIL, debounce(magFailDb, !sensors.mag.valid));
-        setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.hAccM > GPS_WARN_HACC_M));
+        setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.accDegraded));
         setErrorIf(ERR_MAG_ACC_LOW, debounce(magAccDb, sensors.mag.accuracy < MAG_MIN_ACC));
         setErrorIf(ERR_BATT_LOW, debounce(battDb, status.battery < BATT_LOW_TRESHOLD));
 
         setErrorIf(ERR_LORA_TIMEOUT, status.loraTimeout);
         setErrorIf(ERR_WIFI_TIMEOUT, status.wifiTimeout);
 
-        setErrorIf(ERR_NO_ROUTE, route.length == 0);
+        setErrorIf(ERR_NO_ROUTE, !status.routeReady);
         setErrorIf(ERR_NO_HOME, !status.homeSet);
 
         if (waterLevel > 200) {setError(ERR_WATER_LOW);}

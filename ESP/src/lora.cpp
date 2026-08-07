@@ -76,18 +76,29 @@ void resetLoRa()
 
     int state = radio.begin(LORA_FREQ, LORA_BANDWIDTH, LORA_SF, LORA_CODING_RATE, RADIOLIB_SX127X_SYNC_WORD, LORA_POWER);
 
+    xSemaphoreTake(txDoneSem, 0);
+    xSemaphoreTake(rxPacketSem, 0);
+    loraDir = LORA_DIR_RX;
+
     if (state != RADIOLIB_ERR_NONE)
     {
         Serial.print("[LORA] Reinit failed: ");
         Serial.println(state);
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            if (!globalState.status.loraTimeout)
+            {
+                globalState.status.commTimeoutTriggerTime = millis();
+            }
+            globalState.status.loraTimeout = true;
+            xSemaphoreGive(stateMutex);
+        }
+        // Leave interrupt detached to prevent garbage data reseting timeout
+        return;
     }
 
-    xSemaphoreTake(txDoneSem, 0);
-    xSemaphoreTake(rxPacketSem, 0);
-
-    loraDir = LORA_DIR_RX;
     radio.startReceive();
-
     attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
 }
 
@@ -295,6 +306,11 @@ void commsTask(void* pvParameters)
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
+            if (!globalState.status.loraTimeout)
+            {
+                globalState.status.commTimeoutTriggerTime = millis();
+            }
+
             globalState.status.loraTimeout = true;
             xSemaphoreGive(stateMutex);
         }
@@ -305,8 +321,7 @@ void commsTask(void* pvParameters)
             esp_task_wdt_reset();
         }
     }
-
-    
+   
     radio.startReceive();
     pinMode(LORA_DIO0, INPUT);
     attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
