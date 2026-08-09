@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Optional
 from PIL import Image, ImageDraw, ImageTk
 import tkintermapview
 from tkintermapview import map_widget as _tmv_map_widget
@@ -53,12 +53,16 @@ class MapFrame(BaseFrame):
                  on_add_waypoint: Callable[[Tuple[float, float]], None],
                  on_set_home: Callable[[Tuple[float, float]], None],
                  on_save_route: Callable[[str], None],
-                 on_load_route: Callable[[str], None]):
+                 on_load_route: Callable[[str], None],
+                 on_pattern_planner: Callable[[], None] = None):
         
         self.on_add_waypoint = on_add_waypoint
         self.on_set_home = on_set_home
         self.on_save_route = on_save_route
         self.on_load_route = on_load_route
+        self.on_pattern_planner = on_pattern_planner
+
+        self._point_pick_callback = None
 
         self._v_marker = None
         self._v_icon_cache: dict[int, ImageTk.PhotoImage] = {}
@@ -71,7 +75,7 @@ class MapFrame(BaseFrame):
         self._is_dark = False
 
         try:
-            home_icon_path = os.path.join(base_path, "Icons", "home_icon.png")
+            home_icon_path = os.path.join(base_path, "Icons", "green_dot.png")
             self._home_icon = tk.PhotoImage(file = home_icon_path)
         except Exception:
             print("Failed to load home icon")
@@ -100,6 +104,8 @@ class MapFrame(BaseFrame):
 
         ttk.Button(self.toolbar, text = "Save Route", command = self._on_save_route_click).pack(side = "left", padx = 6)
         ttk.Button(self.toolbar, text = "Load Route", command = self._on_load_route_click).pack(side = "left", padx = 6)
+
+        ttk.Button(self.toolbar, text = "Pattern Planner", command = self._on_pattern_planner_click).pack(side = "left", padx = 6)
 
         self.basemap_var = tk.StringVar(value = "Default")
         self.cmb_basemap = ttk.Combobox(
@@ -215,8 +221,23 @@ class MapFrame(BaseFrame):
         if path:
             self.on_load_route(path)
 
+    def _on_pattern_planner_click(self) -> None:
+        if self.on_pattern_planner is not None:
+            self.on_pattern_planner()
+
+    # Arms a single shot map click, route the next map double clik to callback, pass None to cancel pending pick
+    def request_point(self, callback: Optional[Callable[[Tuple[float, float]], None]]) -> None:
+        self._point_pick_callback = callback
+
     def _on_map_double_click(self, event) -> None:
         lat, lon = self.widget.convert_canvas_coords_to_decimal_coords(event.x, event.y)
+
+        if self._point_pick_callback is not None:
+            callback = self._point_pick_callback
+            self._point_pick_callback = None
+            callback((lat, lon))
+            return
+
         telemetry = self.ctrl.get_telemetry_data()
 
         if telemetry.get("mode") == MODE_COURSE:

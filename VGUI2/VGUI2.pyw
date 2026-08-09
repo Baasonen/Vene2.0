@@ -16,6 +16,8 @@ from GUI.Frames.errors_frame import ErrorFrame
 from GUI.Frames.waypoint_frame import WaypointFrame
 from GUI.Frames.map_frame import MapFrame
 from GUI.Frames.manual_control_frame import ManualControlFrame
+from GUI.Pattern.frame import PatternPlannerFrame
+from GUI.swap_container import SwapContainer
 
 try:
     import pygame
@@ -85,12 +87,16 @@ class VGUI:
                                   on_add_waypoint = self._on_add_waypoint,
                                   on_set_home = self._on_set_home,
                                   on_save_route = self._on_save_route,
-                                  on_load_route = self._on_load_route)
+                                  on_load_route = self._on_load_route,
+                                  on_pattern_planner = self._on_toggle_pattern_designer)
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
+
+        self.error_swap = SwapContainer(self.col_left, self.theme)
+
         self.mode_select_frame = ModeSelectFrame(self.col_right, self.theme, self.ctrl)
         self.manual_control_frame = ManualControlFrame(self.col_right, self.theme, self.ctrl, self.root)
         self.telemetry_frame = TelemetryFrame(self.col_right, self.theme, self.ctrl)
-        self.error_frame = ErrorFrame(self.col_left, self.theme, self.ctrl)
+        self.error_frame = ErrorFrame(self.error_swap.base_parent, self.theme, self.ctrl)
         self.waypoint_frame = WaypointFrame(self.col_right, self.theme, self.ctrl, self.map_frame.widget)
 
         self.frames = [
@@ -116,7 +122,32 @@ class VGUI:
 
     def _on_load_route(self, path: str) -> None:
         self.waypoint_frame.load_route(path)
-    
+
+    def _on_toggle_pattern_designer(self) -> None:
+        if self.error_swap.is_overlaid:
+            self._close_pattern_designer()
+        else:
+            self._open_pattern_planner()
+
+    def _open_pattern_planner(self) -> None:
+        pattern_designer_frame = self.error_swap.show_overlay(
+            lambda parent: PatternPlannerFrame(
+                parent, self.theme, self.ctrl, self.map_frame,
+                on_close = self._close_pattern_designer,
+                on_apply_route = self._on_apply_pattern_route))
+
+        self.frames.append(pattern_designer_frame)
+
+    def _close_pattern_designer(self) -> None:
+        if not self.error_swap.is_overlaid:
+            return
+
+        self.frames.remove(self.error_swap.active_overlay)
+        self.error_swap.close_overlay()
+
+    def _on_apply_pattern_route(self, waypoints, overwrite: bool) -> None:
+        self.waypoint_frame.load_waypoints(waypoints, overwrite)
+
     def _refresh(self) -> None:
         telemetry = self.ctrl.get_telemetry_data()
         connection = self.ctrl.get_connection_status()
@@ -148,6 +179,7 @@ class VGUI:
         self.col_left.config(bg = self.theme["bg"])
         self.col_mid.config(bg = self.theme["bg"])
         self.col_right.config(bg = self.theme["bg"])
+        self.error_swap.apply_theme(self.theme)
 
         for frame in self.frames:
             frame.apply_theme(self.theme)

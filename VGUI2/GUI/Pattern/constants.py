@@ -1,0 +1,8 @@
+EARTH_RADIUS_M = 6371000.0
+
+MARKER_ICON_SIZE = 18
+
+PREVIEW_COLOR = "orange"
+AREA_COLOR = "red"
+START_COLOR = "green"
+END_COLOR = "red"

@@ -33,14 +33,14 @@ class WaypointFrame(BaseFrame):
         self._selected_idx: Optional[int] = None
 
         try:
-            icon_path = os.path.join(base_path, "icons", "wp_icon.png")
+            icon_path = os.path.join(base_path, "icons", "red_dot.png")
             self._wp_icon = tk.PhotoImage(file = icon_path)
         except Exception:
             self._wp_icon = None
             print("Unable to load WP icon")
 
         try:
-            selected_icon_path = os.path.join(base_path, "icons", "wp_icon_selected.png")
+            selected_icon_path = os.path.join(base_path, "icons", "yellow_dot.png")
             self._wp_icon_selected = tk.PhotoImage(file = selected_icon_path)
         except Exception:
             self._wp_icon_selected = None
@@ -93,7 +93,8 @@ class WaypointFrame(BaseFrame):
 
         ttk.Button(self.move_bar, text="↑", width=3, command=self._move_up).pack(pady=(0, 2))
         ttk.Button(self.move_bar, text="↓", width=3, command=self._move_down).pack()
-        ttk.Button(self.move_bar, text = "✕", width = 3, command = self._delete_selected).pack(pady = (8, 0))
+        ttk.Button(self.move_bar, text = "D", width = 3, command = self._delete_selected).pack(pady = (8, 0))
+        ttk.Button(self.move_bar, text = "R", width = 3, command = self._reverse_route).pack(pady = (4, 0))
 
     def add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoints.append(coords)
@@ -156,6 +157,19 @@ class WaypointFrame(BaseFrame):
         self._route_changed = True
         self.refresh()
 
+    # Replace route with a new from memory without reading from a file
+    def load_waypoints(self, waypoints: list, overwrite: bool) -> None:
+        if overwrite:
+            self.waypoints = waypoints
+
+        else:
+            for wp in waypoints:
+                self.waypoints.append(wp)
+
+        self._route_changed = True
+        self._selected_idx = None
+        self.refresh()
+
     # Reorder Functions
     def _move_up(self) -> None:
         sel = self.listbox.curselection()
@@ -189,6 +203,15 @@ class WaypointFrame(BaseFrame):
         del self.waypoints[idx]
         self._route_changed = True
 
+        self._selected_idx = None
+        self.refresh()
+
+    def _reverse_route(self) -> None:
+        if len(self.waypoints) < 2:
+            return
+
+        self.waypoints.reverse()
+        self._route_changed = True
         self._selected_idx = None
         self.refresh()
 
