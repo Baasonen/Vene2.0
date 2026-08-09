@@ -102,8 +102,12 @@ void resetLoRa()
         return;
     }
 
-    radio.startReceive();
+    pinMode(LORA_DIO0, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
+    radio.startReceive();
+
+    // If DIO0 already high RISING won't trigger
+    if (digitalRead(LORA_DIO0) == HIGH) {xSemaphoreGive(rxPacketSem);}
 }
 
 int LoRaInit()

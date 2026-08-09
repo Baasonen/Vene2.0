@@ -10,40 +10,91 @@ const char* ip = "192.168.4.1";
 const int udpTxPort = 4210;
 const int udpRxPort = 4211;
 
+#define LORA_TX_TIMEOUT_MS 750
+
 WiFiUDP udp;
 bool udpReady = false;
 
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, -1, -1);
 
-volatile bool receivedFlag = false;
+enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
+volatile LoRaDir loraDir = LORA_DIR_RX;
+static uint32_t txStartTime = 0;
 
-void IRAM_ATTR setFlag() {
-    receivedFlag = true;
+SemaphoreHandle_t rxPacketSem;
+SemaphoreHandle_t txDoneSem;
+
+void IRAM_ATTR onLoraDio0Rise()
+{
+    BaseType_t woken = pdFALSE;
+
+    if (loraDir == LORA_DIR_RX)
+    {
+        xSemaphoreGiveFromISR(rxPacketSem, &woken);
+    }
+    else
+    {
+        xSemaphoreGiveFromISR(txDoneSem, &woken);
+    }
+
+    if (woken) {portYIELD_FROM_ISR();}
+}
+
+void beginTransmit(uint8_t* data, size_t len)
+{
+    txStartTime = millis();
+    loraDir = LORA_DIR_TX;
+    radio.startTransmit(data, len);
+}
+
+void completeTransmit()
+{
+    loraDir = LORA_DIR_RX;
+    radio.startReceive();
+}
+
+void forceRecoverTxStuck()
+{
+    Serial.println("[LORA] TX stuck, forcing RX");
+
+    xSemaphoreTake(txDoneSem, 0);
+    xSemaphoreTake(rxPacketSem, 0);
+
+    radio.standby();
+    loraDir = LORA_DIR_RX;
+    radio.startReceive();
+    txStartTime = 0;
 }
 
 void setup()
 {
     Serial.begin(115200);
 
+    rxPacketSem = xSemaphoreCreateBinary();
+    txDoneSem = xSemaphoreCreateBinary();
+
     SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, -1);
     int state = radio.begin(LORA_FREQ, LORA_BANDWIDTH, LORA_SF, LORA_CODING_RATE, RADIOLIB_SX127X_SYNC_WORD, LORA_POWER);
 
-    Serial.print("LoRa init: ");
-    Serial.println(state == RADIOLIB_ERR_NONE ? "OK" : "FAIL");
-    Serial.print("State code: ");
+    Serial.print("[LORA] LoRa init: ");
+    Serial.print(state == RADIOLIB_ERR_NONE ? "OK" : "FAIL");
     Serial.println(state);
 
-    if (state == RADIOLIB_ERR_NONE) {
-        radio.setDio0Action(setFlag, RISING);
+    if (state == RADIOLIB_ERR_NONE)
+    {
+        radio.setDio0Action(onLoraDio0Rise, RISING);
+        loraDir = LORA_DIR_RX;
         radio.startReceive();
-    } else {
+    }
+    else
+    {
         while (true);
     }
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
 
-    Serial.println("SYSTEM_READY");
+    Serial.println("[REC] Init ready");
 }
 
 void loop()
@@ -53,7 +104,7 @@ void loop()
 
     if (wifiStatus != lastWifiStatus)
     {
-        Serial.print("WiFi status: ");
+        Serial.print("[WIFI] WiFi status: ");
         Serial.println(wifiStatus);
         lastWifiStatus = wifiStatus;
     }
@@ -66,23 +117,30 @@ void loop()
         Serial.println(WiFi.localIP());
     }
 
-    if (receivedFlag)
+    if (xSemaphoreTake(txDoneSem, 0) == pdTRUE)
     {
-        receivedFlag = false;
+        completeTransmit();
+    }
+    else if (loraDir == LORA_DIR_TX && txStartTime != 0 && (millis() - txStartTime) > LORA_TX_TIMEOUT_MS)
+    {
+        forceRecoverTxStuck();
+    }
+
+    if (loraDir == LORA_DIR_RX && xSemaphoreTake(rxPacketSem, 0) == pdTRUE)
+    {
         int len = radio.getPacketLength();
         uint8_t rxBuffer[256];
         int state = radio.readData(rxBuffer, len);
 
-        if (state == RADIOLIB_ERR_NONE && len > 0)
-        {
-            Serial.write(rxBuffer, len);
-        }
-        radio.startReceive();
+        if (state == RADIOLIB_ERR_NONE && len > 0) {Serial.write(rxBuffer, len);}
+
+        if (loraDir == LORA_DIR_RX) {radio.startReceive();}
     }
 
     if (udpReady)
     {
         int packetSize = udp.parsePacket();
+
         if (packetSize > 0)
         {
             uint8_t udpData[4];
@@ -96,54 +154,49 @@ void loop()
     if (Serial.available() > 0)
     {
         uint8_t id = Serial.peek();
-        int expected_len = 0;
+        int expectedLen = 0;
 
-        if (id == PKT_WP_DATA) {expected_len = ROUTE_PACKET_SIZE;}
-        else if (id == PKT_CONTROL) {expected_len = CONTROL_PACKET_SIZE;}
-        else if (id == PKT_MANUAL) {expected_len = MANUAL_SERIAL_SIZE;}
-        else if (id == PKT_DATA) {expected_len = PKT_DATA_SIZE;}
-        else if (id == PKT_RESET_ERRORS) {expected_len = RESET_ERRORS_SIZE;}
-        else if (id == PKT_HOME_SET) {expected_len = HOME_SET_SIZE;}
-        else if (id == PKT_HOME_REQ) {expected_len = HOME_REQ_SIZE;}
-        else if (id == PKT_TIME_DATA) {expected_len = TIME_DATA_SIZE;}
-        else if (id == PKT_COURSE_SET) {expected_len = COURSE_SET_SIZE;}
-        else if (id == PKT_UPLOAD_BEGIN) {expected_len = UPLOAD_BEGIN_SIZE;}
-        else if (id == PKT_THR_SET) {expected_len = THR_SET_SIZE;}
+        if (id == PKT_WP_DATA) {expectedLen = ROUTE_PACKET_SIZE;}
+        else if (id == PKT_CONTROL) {expectedLen = CONTROL_PACKET_SIZE;}
+        else if (id == PKT_MANUAL) {expectedLen = MANUAL_SERIAL_SIZE;}
+        else if (id == PKT_DATA) {expectedLen = PKT_DATA_SIZE;}
+        else if (id == PKT_RESET_ERRORS) {expectedLen = RESET_ERRORS_SIZE;}
+        else if (id == PKT_HOME_SET) {expectedLen = HOME_SET_SIZE;}
+        else if (id == PKT_HOME_REQ) {expectedLen = HOME_REQ_SIZE;}
+        else if (id == PKT_TIME_DATA) {expectedLen = TIME_DATA_SIZE;}
+        else if (id == PKT_COURSE_SET) {expectedLen = COURSE_SET_SIZE;}
+        else if (id == PKT_UPLOAD_BEGIN) {expectedLen = UPLOAD_BEGIN_SIZE;}
+        else if (id == PKT_THR_SET) {expectedLen = THR_SET_SIZE;}
         else
         {
-            Serial.read();   // discard unknown byte
+            Serial.read(); // Discard unknown
             return;
         }
 
-        if (Serial.available() >= expected_len)
+        bool isLoraPacket = (id == PKT_WP_DATA || id == PKT_CONTROL || id == PKT_DATA ||
+                              id == PKT_RESET_ERRORS || id == PKT_HOME_SET || id == PKT_HOME_REQ ||
+                              id == PKT_TIME_DATA || id == PKT_COURSE_SET || id == PKT_THR_SET ||
+                              id == PKT_UPLOAD_BEGIN);
+
+        if (isLoraPacket && loraDir == LORA_DIR_TX) {return;} // If already transmiting leave bytes in serial buffer
+
+        if (Serial.available() >= expectedLen)
         {
             uint8_t txBuffer[64];
-            Serial.readBytes(txBuffer, expected_len);
+            Serial.readBytes(txBuffer, expectedLen);
 
-            if (id == PKT_WP_DATA ||
-                id == PKT_CONTROL ||
-                id == PKT_DATA ||
-                id == PKT_RESET_ERRORS ||
-                id == PKT_HOME_SET ||
-                id == PKT_HOME_REQ ||
-                id == PKT_TIME_DATA ||
-                id == PKT_COURSE_SET ||
-                id == PKT_THR_SET ||
-                id == PKT_UPLOAD_BEGIN)
+            if (isLoraPacket)
             {
-                static uint32_t lastLoRaTx = 0;
+                static uint32_t lastLoraTx = 0;
 
-                if (id == PKT_DATA && (millis() - lastLoRaTx) < 400)
+                if (id == PKT_DATA && (millis() - lastLoraTx) < 400)
                 {
-                    // Discard heartbeat if sent too recently
+                    // Discard too early hb
                 }
                 else
                 {
-                    receivedFlag = false;
-                    lastLoRaTx = millis();
-                    radio.transmit(txBuffer, expected_len);
-                    receivedFlag = false;
-                    radio.startReceive();
+                    lastLoraTx = millis();
+                    beginTransmit(txBuffer, expectedLen);
                 }
             }
 
