@@ -8,7 +8,7 @@ CONNECT_TO_DEBUGGER = False
 
 from typing import Callable, Dict, Optional
 
-from vcom.protocol import (
+from VCOM.protocol import (
     ACK_FORMAT, ACK_SIZE,
 
     FAST_SIZE, HOME_SIZE, COURSE_DATA_SIZE, THR_DATA_SIZE,

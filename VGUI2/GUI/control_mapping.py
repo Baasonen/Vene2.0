@@ -134,7 +134,7 @@ class ControllerMapper:
 
 # Default xbox-style controller    
 def make_xbox_profile() -> ControllerProfile:
-    from vcom.protocol import MODE_STOP, MODE_MANUAL, MODE_COURSE, MODE_AUTO
+    from VCOM.protocol import MODE_STOP, MODE_MANUAL, MODE_COURSE, MODE_AUTO
  
     BUTTON_A, BUTTON_B, BUTTON_X, BUTTON_Y = 0, 1, 2, 3
  

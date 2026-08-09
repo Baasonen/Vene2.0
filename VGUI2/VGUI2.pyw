@@ -1,4 +1,9 @@
-VERSION = 2.3
+from __future__ import annotations
+
+VERSION_MAJOR = 5
+VERSION_MINOR = 0
+
+VERSION = f"2.{VERSION_MAJOR}.{VERSION_MINOR}"
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext
@@ -7,25 +12,34 @@ import time
 import sys
 from typing import Dict, Set, Tuple, Optional
 
+# Import GUI only after showing splash screen
+
 from GUI.themes import THEMES
 
-from GUI.Frames.connection_status_frame import ConnectionStatusFrame
-from GUI.Frames.mode_select_frame import ModeSelectFrame
-from GUI.Frames.telemetry_frame import TelemetryFrame
-from GUI.Frames.errors_frame import ErrorFrame
-from GUI.Frames.waypoint_frame import WaypointFrame
-from GUI.Frames.map_frame import MapFrame
-from GUI.Frames.manual_control_frame import ManualControlFrame
-from GUI.Pattern.frame import PatternPlannerFrame
-from GUI.swap_container import SwapContainer
+def _load_modules() -> None:
+    global ConnectionStatusFrame, ModeSelectFrame, TelemetryFrame
+    global ErrorFrame, WaypointFrame, WaypointListFrame, MapFrame
+    global ManualControlFrame, PatternPlannerFrame, SwapContainer
+    global PYGAME_AVAIL, Controller
 
-try:
-    import pygame
-    PYGAME_AVAIL = True
-except ImportError:
-    PYGAME_AVAIL = False
+    from GUI.Frames.connection_status_frame import ConnectionStatusFrame
+    from GUI.Frames.mode_select_frame import ModeSelectFrame
+    from GUI.Frames.telemetry_frame import TelemetryFrame
+    from GUI.Frames.errors_frame import ErrorFrame
+    from GUI.Frames.waypoint_frame import WaypointFrame
+    from GUI.Frames.waypoint_list_frame import WaypointListFrame
+    from GUI.Frames.map_frame import MapFrame
+    from GUI.Frames.manual_control_frame import ManualControlFrame
+    from GUI.Pattern.frame import PatternPlannerFrame
+    from GUI.swap_container import SwapContainer
 
-from vcom.vcom import Controller
+    try:
+        import pygame
+        PYGAME_AVAIL = True
+    except ImportError:
+        PYGAME_AVAIL = False
+
+    from VCOM.vcom import Controller
 
 class VGUI:
     def __init__(self, root: tk.Tk, controller: Controller):
@@ -88,7 +102,7 @@ class VGUI:
                                   on_set_home = self._on_set_home,
                                   on_save_route = self._on_save_route,
                                   on_load_route = self._on_load_route,
-                                  on_pattern_planner = self._on_toggle_pattern_designer)
+                                  on_pattern_planner = self._on_toggle_pattern_planner)
         self.connection_frame = ConnectionStatusFrame(self.col_left, self.theme, self.ctrl)
 
         self.error_swap = SwapContainer(self.col_left, self.theme)
@@ -97,7 +111,8 @@ class VGUI:
         self.manual_control_frame = ManualControlFrame(self.col_right, self.theme, self.ctrl, self.root)
         self.telemetry_frame = TelemetryFrame(self.col_right, self.theme, self.ctrl)
         self.error_frame = ErrorFrame(self.error_swap.base_parent, self.theme, self.ctrl)
-        self.waypoint_frame = WaypointFrame(self.col_right, self.theme, self.ctrl, self.map_frame.widget)
+        self.waypoint_frame = WaypointFrame(self.col_right, self.theme, self.ctrl, self.map_frame.widget,
+                                            on_toggle_list = self._on_toggle_waypoint_list)
 
         self.frames = [
             self.mode_select_frame,
@@ -120,29 +135,56 @@ class VGUI:
     def _on_save_route(self, path: str) -> None:
         self.waypoint_frame.save_route(path)
 
-    def _on_load_route(self, path: str) -> None:
-        self.waypoint_frame.load_route(path)
+    def _on_load_route(self, path: str):
+        return self.waypoint_frame.load_route(path)
 
-    def _on_toggle_pattern_designer(self) -> None:
+    def _on_toggle_pattern_planner(self) -> None:
         if self.error_swap.is_overlaid:
-            self._close_pattern_designer()
-        else:
-            self._open_pattern_planner()
+            was_pattern = isinstance(self.error_swap.active_overlay, PatternPlannerFrame)
+            self._close_overlay()
+            if was_pattern:
+                return
+
+        self._open_pattern_planner()
+
+    def _on_toggle_waypoint_list(self) -> None:
+        if self.error_swap.is_overlaid:
+            was_list = isinstance(self.error_swap.active_overlay, WaypointListFrame)
+            self._close_overlay()
+            if was_list:
+                return
+
+        self._open_waypoint_list()
 
     def _open_pattern_planner(self) -> None:
-        pattern_designer_frame = self.error_swap.show_overlay(
+        pattern_planner_frame = self.error_swap.show_overlay(
             lambda parent: PatternPlannerFrame(
                 parent, self.theme, self.ctrl, self.map_frame,
-                on_close = self._close_pattern_designer,
+                on_close = self._close_overlay,
                 on_apply_route = self._on_apply_pattern_route))
 
-        self.frames.append(pattern_designer_frame)
+        self.frames.append(pattern_planner_frame)
 
-    def _close_pattern_designer(self) -> None:
+    def _open_waypoint_list(self) -> None:
+        list_frame = self.error_swap.show_overlay(
+            lambda parent: WaypointListFrame(
+                parent, self.theme, self.ctrl, self.waypoint_frame,
+                on_close = self._close_overlay))
+
+        self.waypoint_frame.attach_list(list_frame)
+        self.frames.append(list_frame)
+
+    def _close_overlay(self) -> None:
         if not self.error_swap.is_overlaid:
             return
 
-        self.frames.remove(self.error_swap.active_overlay)
+        active = self.error_swap.active_overlay
+        self.frames.remove(active)
+
+        if isinstance(active, WaypointListFrame):
+            self.waypoint_frame.select(None)
+            self.waypoint_frame.detach_list()
+
         self.error_swap.close_overlay()
 
     def _on_apply_pattern_route(self, waypoints, overwrite: bool) -> None:
@@ -246,12 +288,72 @@ class VGUI:
             bordercolor = self.theme["border"]
         )
 
+def _create_splash(root: tk.Tk):
+    theme_id = next(iter(THEMES))
+
+    splash = tk.Toplevel(root)
+    splash.overrideredirect(True) # No title bar / borders
+    splash.config(bg = THEMES[theme_id]["panel_bg"])
+
+    width, height = 420, 220
+    screen_w = splash.winfo_screenwidth()
+    screen_h = splash.winfo_screenheight()
+
+    x = (screen_w - width) // 2
+    y = (screen_h - height) // 2
+
+    splash.geometry(f"{width}x{height}+{x}+{y}")
+
+    splash.attributes("-topmost", True)
+
+    tk.Label(splash, text = "VGUI", font = ("Segoe UI", 28, "bold"),
+             bg = THEMES[theme_id]["panel_bg"], fg = THEMES[theme_id]["fg"]).pack(pady = (45, 5))
+    tk.Label(splash, text = f"{VERSION}", font = ("Segoe UI", 16),
+             bg = THEMES[theme_id]["panel_bg"], fg = THEMES[theme_id]["fg"]).pack()
+
+    status_var = tk.StringVar(value = "Starting...")
+    tk.Label(splash, textvariable = status_var, font = ("Segoe UI", 10),
+             bg = THEMES[theme_id]["panel_bg"], fg = THEMES[theme_id]["fg"]).pack(side = "bottom", pady = 20)
+
+    # Force the window to paint
+    splash.update_idletasks()
+    splash.update()
+    return splash, status_var
+
+MIN_SPLASH_SECONDS = 1.0
+
 def main() -> None:
-    port = sys.argv[1] if len(sys.argv) > 1 else "COM4"
-    controller = Controller(port = port)
+    start_time = time.monotonic()
 
     root = tk.Tk()
+    root.withdraw() # Hide untill fully built
+
+    splash, splash_status = _create_splash(root)
+
+    def set_status(text: str) -> None:
+        splash_status.set(text)
+        splash.update()
+
+    set_status("Loading Modules...")
+    _load_modules()
+
+    port = sys.argv[1] if len(sys.argv) > 1 else "COM4"
+
+    set_status("VCOM Init...")
+    controller = Controller(port = port)
+
+    set_status("Building UI...")
     VGUI(root, controller)
+
+    elapsed = time.monotonic() - start_time
+    remaining = MIN_SPLASH_SECONDS - elapsed
+    if remaining > 0:
+        time.sleep(remaining)
+
+    splash.destroy()
+    root.deiconify()
+    root.lift()
+    root.focus_force()
 
     try:
         root.mainloop()

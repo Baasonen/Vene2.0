@@ -9,7 +9,7 @@ import os
 import math
 
 from GUI.base_frame import BaseFrame
-from vcom.protocol import MODE_COURSE
+from VCOM.protocol import MODE_COURSE
 
 # Fix for slow OpenSeaMap
 class _TimeoutRequests:
@@ -219,7 +219,24 @@ class MapFrame(BaseFrame):
         )
 
         if path:
-            self.on_load_route(path)
+            points = self.on_load_route(path)
+            self._focus_on_points(points)
+
+    def _focus_on_points(self, points) -> None:
+        if not points:
+            return
+
+        lats = [p[0] for p in points]
+        lons = [p[1] for p in points]
+
+        if len(points) == 1:
+            self.widget.set_position(lats[0], lons[0])
+            return
+
+        try:
+            self.widget.fit_bounding_box((max(lats), min(lons)), (min(lats), max(lons)))
+        except Exception:
+            self.widget.set_position(sum(lats) / len(lats), sum(lons) / len(lons))
 
     def _on_pattern_planner_click(self) -> None:
         if self.on_pattern_planner is not None:

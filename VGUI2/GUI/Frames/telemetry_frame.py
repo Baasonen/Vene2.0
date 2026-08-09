@@ -1,6 +1,6 @@
 import tkinter as tk
 from GUI.base_frame import BaseFrame
-from vcom.protocol import MODE_NAMES
+from VCOM.protocol import MODE_NAMES
 
 
 class TelemetryFrame(BaseFrame):

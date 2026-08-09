@@ -5,8 +5,8 @@ import threading
 import time
 
 from typing import Callable, Dict, List, Optional, Set, Tuple, Any
-from vcom.comms import SerialTransport
-from vcom.protocol import (
+from VCOM.comms import SerialTransport
+from VCOM.protocol import (
     ACK_FORMAT, CONTROL_FORMAT, FAST_FORMAT, HOME_FORMAT,
     RESET_ERRORS_FORMAT, ROUTE_FORMAT, SLOW_FORMAT, TIME_DATA_FORMAT,
     COURSE_SET_FORMAT, COURSE_DATA_FORMAT, THR_SET_FORMAT, THR_DATA_FORMAT,
