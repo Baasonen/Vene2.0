@@ -84,6 +84,7 @@ void errorTask(void* pv)
         setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.accDegraded));
         setErrorIf(ERR_MAG_ACC_LOW, debounce(magAccDb, sensors.mag.accuracy < MAG_MIN_ACC));
         setErrorIf(ERR_BATT_LOW, debounce(battDb, status.battery < BATT_LOW_TRESHOLD));
+        setErrorIf(ERR_EKF_UNINIT, !sensors.ekf.valid);
 
         setErrorIf(ERR_LORA_TIMEOUT, status.loraTimeout);
         setErrorIf(ERR_WIFI_TIMEOUT, status.wifiTimeout);

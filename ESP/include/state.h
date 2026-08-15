@@ -2,6 +2,7 @@
 
 #include "gps.h"
 #include "magnetometer.h"
+#include "LKF.h"
 
 #define MAG_MIN_ACC 1
 #define WP_AMMNT_LIM 200
@@ -54,6 +55,7 @@ typedef struct
 {
     GPSData gps;
     MagData mag;
+    PosSol ekf;
 } SensorData;
 
 typedef struct 

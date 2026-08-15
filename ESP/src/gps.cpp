@@ -10,6 +10,8 @@ static HardwareSerial gpsSerial(2);
 
 #define GPS_DEBUG false
 
+#define MIN_SAT_COUNT 4
+
 #if GPS_DEBUG
 static uint32_t dbgFrames = 0;
 static uint32_t dbgChecksumFail = 0;
@@ -74,11 +76,21 @@ static void handleVELNED()
 {
     uint32_t gSpeed;
     int32_t heading;
+    int32_t velN_cms, velE_cms;
+    uint32_t sAcc_cms;
+
     memcpy(&gSpeed, ubxPayload + 20, 4);
     memcpy(&heading, ubxPayload + 24, 4);
+    memcpy(&velN_cms, ubxPayload + 4, 4);
+    memcpy(&velE_cms, ubxPayload + 8, 4);
+    memcpy(&sAcc_cms, ubxPayload + 28, 4);
     
     data.speedKMH = gSpeed * 0.036f; // cm/s -> kmh/h
     data.headingDeg = heading * 1e-5f; // 1e-5 deg -> deg
+
+    data.velN = velN_cms / 100.0f;
+    data.velE = velE_cms / 100.0f;
+    data.velAccM = sAcc_cms / 100.0f;
 
     #if GPS_DEBUG
     dbgVelnedCount++;
@@ -264,7 +276,7 @@ GPSData getGPS()
     bool accOk = data.hAccM < 10.0f;
     data.accDegraded = true;
 
-    if (solFixOk && solFresh && posFresh && accOk)
+    if (solFixOk && solFresh && posFresh && accOk && data.satellites >= MIN_SAT_COUNT)
     {
         lastGoodFixMs = now;
         data.valid = true;

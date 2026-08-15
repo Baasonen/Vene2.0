@@ -18,19 +18,18 @@ struct ModeRequirements
 {
     bool reqWifi;
     bool reqLora;
-    bool reqGPS;
-    bool reqGPSAcc;
     bool reqMag;
+    bool reqPosSol;
     bool reqHome;
     bool reqRoute;
 };
 
 static const ModeRequirements MODE_REQS[MODE_COUNT] = {
-    {false, false, false, false, false, false, false}, // Stop
-    {true, false, false, false, false, false, false}, // Manual
-    {false, true, true, true, true, true, true}, // AP
-    {false, false, true, false, true, true, false}, // RTH
-    {false, true, false, false, true, false, false}, // CRS
+    {false, false, false, false, false, false}, // Stop
+    {true, false, false, false, false, false}, // Manual
+    {false, true, true, true, true, true}, // AP
+    {false, false, true, true, true, false}, // RTH
+    {false, true, true, false, false, false}, // CRS
 };
 
 static bool modeValid(uint8_t m)
@@ -40,8 +39,7 @@ static bool modeValid(uint8_t m)
 
     if (r.reqWifi && hasError(ERR_WIFI_TIMEOUT)) {return false;}
     if (r.reqLora && hasError(ERR_LORA_TIMEOUT)) {return false;}
-    if (r.reqGPS && hasError(ERR_GPS_FAIL)) {return false;}
-    if (r.reqGPSAcc && hasError(ERR_GPS_ACC_LOW)) {return false;}
+    if (r.reqPosSol && hasError(ERR_EKF_UNINIT)) {return false;}
     if (r.reqMag && (hasError(ERR_MAG_FAIL) || hasError(ERR_MAG_ACC_LOW))) {return false;}
     if (r.reqHome && hasError(ERR_NO_HOME)) {return false;}
     if (r.reqRoute && hasError(ERR_NO_ROUTE)) {return false;}

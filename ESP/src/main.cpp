@@ -20,6 +20,7 @@
 #include "errors.h"
 #include "autopilot.h"
 #include "led.h"
+#include "LKF.h"
 
 #define WDT_TIMEOUT 5
 #define HOME_TRESHOLD 5
@@ -43,6 +44,8 @@ void sensorTask(void* pv)
         SensorData data;
         data.gps = getGPS();
         data.mag = getMagnetometer();
+
+        data.ekf = EKFUpdate(data.gps, data.mag);
 
         xQueueOverwrite(sensorQueue, &data);
     }
@@ -105,10 +108,10 @@ void controlTask(void* pv)
  
             case 3: // RETURN HOME
                 
-                if (distanceToPoint(status.home.lat, status.home.lon, sensors.gps.lat, sensors.gps.lon) > HOME_TRESHOLD)
+                if (distanceToPoint(status.home.lat, status.home.lon, sensors.ekf.lat, sensors.ekf.lon) > HOME_TRESHOLD)
                 {
                     setThrottle(status.APThrottle);
-                    steerTo(headingToPoint(sensors.gps.lat, sensors.gps.lon, status.home.lat, status.home.lon));
+                    steerTo(headingToPoint(sensors.ekf.lat, sensors.ekf.lon, status.home.lat, status.home.lon));
                 }
                 else
                 {
@@ -180,8 +183,8 @@ void diagTask(void* pv)
             Serial.println("\n--- VENE 2.0 ---");
             Serial.printf("Mode:    %u\n", status.mode);
             Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HACC: %.2f\n",
-                          sensors.gps.valid ? "OK " : "BAD",
-                          sensors.gps.lat, sensors.gps.lon,
+                          sensors.ekf.valid ? "OK " : "BAD",
+                          sensors.ekf.lat, sensors.ekf.lon,
                           sensors.gps.satellites, sensors.gps.hAccM);
             Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
                           sensors.mag.valid ? "OK " : "BAD",
@@ -322,6 +325,8 @@ void setup()
     if (!GPSInit()) {Serial.println("[INIT] GPS init failed"); sensorInitFail = true;}
 
     if (!sensorInitFail) {Serial.println("[INIT] Sensor init OK");}
+
+    EKFInit();
 
     ledSetup();
 
