@@ -79,6 +79,8 @@ class WaypointFrame(BaseFrame):
                               anchor = "w", bg = self.theme["panel_bg"], fg = self.theme["fg"])
         self.length_label.pack(side = "bottom", fill = "x")
 
+        self.apply_theme(self.theme)
+
     def add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoints.append(coords)
         self._route_changed = True

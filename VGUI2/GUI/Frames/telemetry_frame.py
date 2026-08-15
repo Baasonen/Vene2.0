@@ -12,7 +12,6 @@ class TelemetryFrame(BaseFrame):
         ("NAV", "Target WP (idx)", "—"),
         ("BAT", "Battery", "—V"),
         ("SIG", "LoRa RSSI", "— dBm"),
-        ("HOME", "Home WP", "—, —"),
     ]
 
     MAG_ACC_BIT_NAMES = ["HDG_A1", "HDG_A2", "HDG_A3"]
@@ -110,13 +109,6 @@ class TelemetryFrame(BaseFrame):
         gps.config(text = gps_text, fg = gps_color)
 
         self.widgets["SIG"][0].config(text=f"{telemetry['signal']} dBm")
-
-        home, _, _ = self.widgets["HOME"]
-        if connection["home_set"]:
-            home.config(text=f"{connection['home_lat']:.6f} N, {connection['home_lon']:.6f} E",
-                        fg=self.theme["fg"])
-        else:
-            home.config(text="N/A", fg=self.theme["orange"])
 
     def apply_theme(self, theme: dict) -> None:
         super().apply_theme(theme)

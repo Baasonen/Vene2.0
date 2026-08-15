@@ -1,5 +1,3 @@
-VERSION = 2.3
-
 import struct
 import threading
 import time
@@ -31,8 +29,6 @@ _NO_PENDING = object()
 class Controller:
 
     def __init__(self, port: str = "COM4", baud: int = 115200):
-        self.version = VERSION
-
         self.error_defs: Dict[int, Tuple[str, str]] = load_error_defs()
 
         self._telemetry_data: dict = {

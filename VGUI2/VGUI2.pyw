@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 VERSION_MAJOR = 5
-VERSION_MINOR = 0
+VERSION_MINOR = 3
 
 VERSION = f"2.{VERSION_MAJOR}.{VERSION_MINOR}"
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 
 import time
 import sys
+import os
 from typing import Dict, Set, Tuple, Optional
 
 # Import GUI only after showing splash screen
@@ -20,7 +21,7 @@ def _load_modules() -> None:
     global ConnectionStatusFrame, ModeSelectFrame, TelemetryFrame
     global ErrorFrame, WaypointFrame, WaypointListFrame, MapFrame
     global ManualControlFrame, PatternPlannerFrame, SwapContainer
-    global PYGAME_AVAIL, Controller
+    global PYGAME_AVAIL, Controller, TelemetryRecorder
 
     from GUI.Frames.connection_status_frame import ConnectionStatusFrame
     from GUI.Frames.mode_select_frame import ModeSelectFrame
@@ -40,6 +41,7 @@ def _load_modules() -> None:
         PYGAME_AVAIL = False
 
     from VCOM.vcom import Controller
+    from VCOM.telemetry_recorder import TelemetryRecorder
 
 class VGUI:
     def __init__(self, root: tk.Tk, controller: Controller):
@@ -48,9 +50,11 @@ class VGUI:
         self.current_theme_name = "dark"
         self.theme = THEMES[self.current_theme_name]
 
-        self.root.title(f"VGUI {VERSION} / VCOM {controller.version}")
+        self.root.title(f"VGUI {VERSION}")
         self.root.geometry("1980x1080")
         self.root.configure(bg = self.theme["bg"])
+
+        self.recorder = TelemetryRecorder(error_defs = self.ctrl.error_defs)
 
         self._build_layout()
         self._apply_ttk_style()
@@ -80,8 +84,11 @@ class VGUI:
         self.theme_combo = ttk.Combobox(self.header, textvariable = self.theme_var,
                                         values = list(THEMES.keys()), state = "readonly",
                                         font = ("Segoe UI", 12), width = 8)
-        self.theme_combo.pack(side = "right", padx = (15, 5), pady = 5)
+        self.theme_combo.pack(side = "right", padx = (0, 5), pady = 5)
         self.theme_combo.bind("<<ComboboxSelected>>", self._on_theme_select)
+
+        self.btn_record = ttk.Button(self.header, text = "Record", command = self._on_toggle_recording)
+        self.btn_record.pack(side = "right", padx = (0, 15))
 
         self.main = tk.Frame(self.root, bg=self.theme["bg"])
         self.main.pack(fill="both", expand=True, padx=10, pady=5)
@@ -194,10 +201,45 @@ class VGUI:
         telemetry = self.ctrl.get_telemetry_data()
         connection = self.ctrl.get_connection_status()
 
+        if self.recorder.active:
+            self.recorder.record(telemetry, connection)
+
+            elapsed = int(time.time() - self.recorder.start_time)
+            mm, ss = divmod(elapsed, 60)
+            self.btn_record.config(text = f"Stop ({mm:02d}:{ss:02d})")
+
         for frame in self.frames:
             frame.update(telemetry, connection)
 
         self.root.after(100, self._refresh)
+
+    # Telemetry recording
+    def _on_toggle_recording(self) -> None:
+        if self.recorder.active:
+            self._stop_recording()
+        else:
+            self._start_recording()
+
+    def _start_recording(self) -> None:
+        try:
+            self.recorder.start()
+        except OSError as e:
+            messagebox.showerror("Recording", f"Could not start recording:\n{e}")
+            return
+
+        self.btn_record.config(text = "Stop (00:00)", style = "Recording.TButton")
+
+    def _stop_recording(self) -> None:
+        path = self.recorder.stop()
+        self.btn_record.config(text = "Record", style = "TButton")
+
+        if path:
+            messagebox.showinfo("Recording saved", f"Telemetry recording saved to:\n{path}")
+
+    def shutdown(self) -> None:
+        # Close in-progress file when shutting down
+        if self.recorder.active:
+            self.recorder.stop()
 
     def _update_clock(self) -> None:
         self.lbl_clock.config(text = time.strftime("%H:%M:%S"))
@@ -257,6 +299,22 @@ class VGUI:
         style.map("TButton",
             background = [("active", self.theme["accent"]), ("pressed", self.theme["bg"])],
             foreground = [("active", self.theme["fg"])]
+        )
+
+        style.configure("Recording.TButton",
+            background = self.theme["panel_bg"],
+            foreground = self.theme["fg"],
+            bordercolor = self.theme["green"],
+            focuscolor = self.theme["green"],
+            relief = "solid",
+            borderwidth = 2,
+            padding = 4
+        )
+
+        style.map("Recording.TButton",
+            background = [("active", self.theme["accent"]), ("pressed", self.theme["bg"])],
+            foreground = [("active", self.theme["fg"])],
+            bordercolor = [("active", self.theme["green"]), ("!active", self.theme["green"])]
         )
 
         style.configure("TScrollbar",
@@ -325,10 +383,23 @@ MIN_SPLASH_SECONDS = 1.0
 def main() -> None:
     start_time = time.monotonic()
 
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("VCOM.VGUI." + VERSION)
+        except Exception:
+            pass
+
     root = tk.Tk()
     root.withdraw() # Hide untill fully built
 
     splash, splash_status = _create_splash(root)
+
+    try:
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Icons", "main.ico")
+        root.iconbitmap(icon_path)
+    except Exception:
+        messagebox.showerror("Error", f"Could not load icon Icons/main.ico")
 
     def set_status(text: str) -> None:
         splash_status.set(text)
@@ -343,7 +414,7 @@ def main() -> None:
     controller = Controller(port = port)
 
     set_status("Building UI...")
-    VGUI(root, controller)
+    prog = VGUI(root, controller)
 
     elapsed = time.monotonic() - start_time
     remaining = MIN_SPLASH_SECONDS - elapsed
@@ -360,6 +431,7 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        prog.shutdown()
         controller.stop()
 
 if __name__ == "__main__":

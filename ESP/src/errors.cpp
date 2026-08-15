@@ -10,6 +10,7 @@
 #define WI_SAMPLE_PERIOD_MS 2000
 #define WI_SAMPLE_DIVIDER (WI_SAMPLE_PERIOD_MS / ERROR_TASK_PERIOD_MS)
 #define DEBOUNCE_THRESHOLD 5
+#define GPS_DEBOUNCE_THRESHOLD 30
 #define BATT_LOW_TRESHOLD 20
 
 struct Debounce
@@ -81,10 +82,10 @@ void errorTask(void* pv)
 
         setErrorIf(ERR_GPS_FAIL, debounce(gpsFailDb, !sensors.gps.valid));
         setErrorIf(ERR_MAG_FAIL, debounce(magFailDb, !sensors.mag.valid));
-        setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.accDegraded));
+        setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, sensors.gps.accDegraded, GPS_DEBOUNCE_THRESHOLD));
         setErrorIf(ERR_MAG_ACC_LOW, debounce(magAccDb, sensors.mag.accuracy < MAG_MIN_ACC));
         setErrorIf(ERR_BATT_LOW, debounce(battDb, status.battery < BATT_LOW_TRESHOLD));
-        setErrorIf(ERR_EKF_UNINIT, !sensors.ekf.valid);
+        setErrorIf(ERR_KF_UNINIT, !sensors.ekf.valid);
 
         setErrorIf(ERR_LORA_TIMEOUT, status.loraTimeout);
         setErrorIf(ERR_WIFI_TIMEOUT, status.wifiTimeout);

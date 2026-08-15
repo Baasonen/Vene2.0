@@ -107,7 +107,7 @@ class MapFrame(BaseFrame):
 
         ttk.Button(self.toolbar, text = "Pattern Planner", command = self._on_pattern_planner_click).pack(side = "left", padx = 6)
 
-        self.basemap_var = tk.StringVar(value = "Default")
+        self.basemap_var = tk.StringVar(value = "Satellite")
         self.cmb_basemap = ttk.Combobox(
             self.toolbar, textvariable = self.basemap_var, values = BASEMAP_OPTIONS,
             state = "readonly", width = 12,
@@ -141,6 +141,8 @@ class MapFrame(BaseFrame):
         self._v_img_orig = self._load_icon()
         if self._home_icon == None:
             self._home_icon = ImageTk.PhotoImage(self._make_home_pin_icon())
+
+        self.apply_theme(self.theme)
 
     # Icon 
     @staticmethod

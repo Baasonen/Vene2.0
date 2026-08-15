@@ -39,7 +39,7 @@ static bool modeValid(uint8_t m)
 
     if (r.reqWifi && hasError(ERR_WIFI_TIMEOUT)) {return false;}
     if (r.reqLora && hasError(ERR_LORA_TIMEOUT)) {return false;}
-    if (r.reqPosSol && hasError(ERR_EKF_UNINIT)) {return false;}
+    if (r.reqPosSol && hasError(ERR_KF_UNINIT)) {return false;}
     if (r.reqMag && (hasError(ERR_MAG_FAIL) || hasError(ERR_MAG_ACC_LOW))) {return false;}
     if (r.reqHome && hasError(ERR_NO_HOME)) {return false;}
     if (r.reqRoute && hasError(ERR_NO_ROUTE)) {return false;}
