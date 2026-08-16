@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 VERSION_MAJOR = 5
-VERSION_MINOR = 3
+VERSION_MINOR = 4
 
 VERSION = f"2.{VERSION_MAJOR}.{VERSION_MINOR}"
 

@@ -1,8 +1,0 @@
-# Duration     : 00:00:02
-# Distance     : 0.000 km  (0 m)
-# Avg speed    : 0.00 kn  (0.00 m/s)
-# Top speed    : 0.00 kn  (0.00 m/s)
-# ----------------------------
-
-# Recording started 2026-08-15 22:41:12
-22:41:12.694  POS=NO FIX  HDG=0.0  MODE=0  WP=0  BAT=0.0V  HACC=0.0m  RSSI=0dBm  ERR=00000000[-]  LORA=N  WIFI=N

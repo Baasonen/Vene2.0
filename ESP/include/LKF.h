@@ -18,10 +18,11 @@ typedef struct
 
     float posNIS;
     float velNIS;
+    float posNISAvg;
 
     bool accurate;
     bool valid;
 } PosSol;
 
-void EKFInit();
-PosSol EKFUpdate(const GPSData& gps, const MagData& mag);
+void LKFInit();
+PosSol LKFUpdate(const GPSData& gps, const MagData& mag);

@@ -9,6 +9,8 @@ import os
 import math
 
 from GUI.base_frame import BaseFrame
+from GUI.speedo_overlay import SpeedoOverlay, OVERLAY_TOP_Y
+from GUI.heading_overlay import HeadingOverlay, OVERLAY_GAP
 from VCOM.protocol import MODE_COURSE
 
 # Fix for slow OpenSeaMap
@@ -34,6 +36,7 @@ FALLBACK_POS = (60.1849, 24.8250)
 ROUTES_DIR = os.path.join(os.getcwd(), "Routes")
 
 BASEMAP_OPTIONS = ["Default", "Satellite", "OpenStreetMap"]
+OVERLAY_OPTIONS = ["None", "Speed", "Heading", "Both"]
 
 BASE_TILE_SERVERS = {
     "Default": {
@@ -124,6 +127,14 @@ class MapFrame(BaseFrame):
         )
         self.chk_seamark.pack(side = "right", padx = 5)
 
+        self.overlay_var = tk.StringVar(value = "Both")
+        self.cmb_overlay = ttk.Combobox(
+            self.toolbar, textvariable = self.overlay_var, values = OVERLAY_OPTIONS,
+            state = "readonly", width = 8,
+        )
+        self.cmb_overlay.bind("<<ComboboxSelected>>", lambda _event: self._on_overlay_mode_change())
+        self.cmb_overlay.pack(side = "right", padx = 6)
+
         self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
         self.widget.pack(fill = "both", expand = True)
         self.widget.set_zoom(16)
@@ -138,11 +149,49 @@ class MapFrame(BaseFrame):
 
         self.widget.canvas.bind("<Double-Button-1>", self._on_map_double_click)
 
+        self.speedo = SpeedoOverlay(self.widget)
+        self.heading = HeadingOverlay(self.widget)
+
+        self.speedo.frame.bind("<Configure>", self._sync_overlays)
+
+        self._on_overlay_mode_change()
+
         self._v_img_orig = self._load_icon()
         if self._home_icon == None:
             self._home_icon = ImageTk.PhotoImage(self._make_home_pin_icon())
 
         self.apply_theme(self.theme)
+
+    def _sync_overlays(self, event = None) -> None:
+        if self.overlay_var.get() == "Both":
+            width = event.width if event else self.speedo.frame.winfo_reqwidth()
+            height = event.height if event else self.speedo.frame.winfo_reqheight()
+            
+            self.heading.set_min_width(width - 4)
+            self.heading.set_visible(True, y = OVERLAY_TOP_Y + height + OVERLAY_GAP)
+
+    def _on_overlay_mode_change(self) -> None:
+        mode = self.overlay_var.get()
+
+        show_speedo = mode in ("Speed", "Both")
+        show_heading = mode in ("Heading", "Both")
+
+        self.speedo.set_visible(show_speedo)
+
+        if show_heading:
+            if show_speedo:
+                self.widget.update_idletasks()
+                y = OVERLAY_TOP_Y + self.speedo.frame.winfo_reqheight() + OVERLAY_GAP
+
+                self._sync_overlays()
+            else:
+                y = OVERLAY_TOP_Y
+
+                self.heading.set_min_width(0)
+
+            self.heading.set_visible(True, y = y)
+        else:
+            self.heading.set_visible(False)
 
     # Icon 
     @staticmethod
@@ -303,6 +352,9 @@ class MapFrame(BaseFrame):
 
     # Refresh
     def update(self, telemetry: dict, connection: dict) -> None:
+        self.speedo.update(telemetry)
+        self.heading.update(telemetry)
+
         lat, lon = telemetry["lat"], telemetry["lon"]
         hlat, hlon, hset = connection["home_lat"], connection["home_lon"], connection["home_set"]
 
@@ -354,3 +406,6 @@ class MapFrame(BaseFrame):
         self.chk_seamark.config(bg = theme["panel_bg"], fg = theme["fg"],
                                 activebackground = theme["panel_bg"], activeforeground = theme["fg"],
                                 selectcolor = self.theme["checkbox"])
+
+        self.speedo.apply_theme(theme)
+        self.heading.apply_theme(theme)

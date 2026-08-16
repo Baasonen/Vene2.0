@@ -55,7 +55,7 @@ class WaypointFrame(BaseFrame):
 
     def build(self):
         self.frame = tk.LabelFrame(
-            self.parent, text = "Waypoints",
+            self.parent, text = "Route",
             font = ("Segoe UI", 10, "bold"), padx = 10, pady = 8,
             bg = self.theme["panel_bg"], fg = self.theme["fg"])
         self.frame.pack(fill = "x", expand = False, pady = (0, 10))

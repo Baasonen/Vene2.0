@@ -30,6 +30,7 @@ struct KF
 
     float posNIS;
     float velNIS;
+    float posNISAvg = 1.0f;
 
     void reset(float pos0, float vel0, float posVar0, float velVar0)
     {
@@ -41,6 +42,7 @@ struct KF
 
         posNIS = 0.0f;
         velNIS = 0.0f;
+        posNISAvg = 0.0f;
     }
 
     void predict(float dt, float qPos, float qVel)
@@ -86,6 +88,9 @@ struct KF
         if (s <= 0.0f) {return;}
 
         posNIS = (y * y) / s;
+
+        const float NIS_SAMPLE = 0.02f;
+        posNISAvg = (1.0f - NIS_SAMPLE) * posNISAvg + NIS_SAMPLE * posNIS;
 
         float k0 = p00 / s;
         float k1 = p01 / s;
@@ -163,7 +168,7 @@ static float updateTurnRate(const MagData &mag, float dt)
     return rate;
 }
 
-void EKFInit()
+void LKFInit()
 {
     initialized = false;
     lat0 = lon0 = 0.0;
@@ -174,7 +179,7 @@ void EKFInit()
     east.reset(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
+PosSol LKFUpdate(const GPSData &gps, const MagData &mag)
 {
     PosSol out = {0};
 
@@ -218,7 +223,7 @@ PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
     // Too long w/o reliable gps fix
     if ((now - lastValidFixMs) > REAQUIRE_TIMEOUT_MS)
     {
-        EKFInit();
+        LKFInit();
 
         return out;
     }
@@ -258,6 +263,7 @@ PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
 
     out.posNIS = (north.posNIS + east.posNIS) / 2.0f;
     out.velNIS = (north.velNIS + east.velNIS) / 2.0f;
+    out.posNISAvg = (north.posNISAvg + east.posNISAvg) / 2.0f;
 
     double lat, lon;
     toLLA(north.pos, east.pos, lat, lon);

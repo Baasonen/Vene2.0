@@ -55,7 +55,7 @@ class ManualControlFrame(BaseFrame):
         self.header_row = tk.Frame(self.frame, bg = self.theme["panel_bg"])
         self.header_row.pack(fill = "x", padx = 8, pady = (6, 4))
 
-        self.lbl_title = tk.Label(self.header_row, text = "CONTROL",
+        self.lbl_title = tk.Label(self.header_row, text = "Control",
                                    font = ("Segoe UI", 9, "bold"),
                                    bg = self.theme["panel_bg"], fg = self.theme["fg"])
         self.lbl_title.pack(side = "left")

@@ -45,7 +45,7 @@ void sensorTask(void* pv)
         data.gps = getGPS();
         data.mag = getMagnetometer();
 
-        data.kf = EKFUpdate(data.gps, data.mag);
+        data.kf = LKFUpdate(data.gps, data.mag);
 
         xQueueOverwrite(sensorQueue, &data);
     }
@@ -186,7 +186,7 @@ void diagTask(void* pv)
                           sensors.kf.valid ? "OK " : "BAD",
                           sensors.kf.lat, sensors.kf.lon,
                           sensors.gps.satellites, sensors.gps.hAccM, sensors.kf.posStdM);
-            Serial.printf("KF NIS: pos: %.2f vel: %.2f\n", sensors.kf.posNIS, sensors.kf.velNIS);
+            Serial.printf("KF NIS: pos: %.2f vel: %.2f\n", sensors.kf.posNISAvg, sensors.kf.velNIS);
             Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
                           sensors.mag.valid ? "OK " : "BAD",
                           sensors.mag.heading, sensors.mag.accuracy);
@@ -327,7 +327,7 @@ void setup()
 
     if (!sensorInitFail) {Serial.println("[INIT] Sensor init OK");}
 
-    EKFInit();
+    LKFInit();
 
     ledSetup();
 

@@ -14,8 +14,8 @@ static uint32_t txStartTime = 0;
 static uint32_t dutyWindowStart = 0;
 static uint32_t dutyAirtimeMs = 0;
 
-#define SLOW_TELE_PERIOD_MS 5700
-#define FAST_TELE_PERIOD_MS 2000
+#define SLOW_TELE_PERIOD_MS 2700
+#define FAST_TELE_PERIOD_MS 1000
 #define BE_TELE_PERIOD_MS 15300
 
 enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
