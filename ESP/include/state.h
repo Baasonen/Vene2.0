@@ -55,7 +55,7 @@ typedef struct
 {
     GPSData gps;
     MagData mag;
-    PosSol ekf;
+    PosSol kf;
 } SensorData;
 
 typedef struct 

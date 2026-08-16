@@ -40,6 +40,46 @@ static void ubxSetMsgRate(Stream &port, uint8_t msgClass, uint8_t msgID, uint8_t
     delay(100);
 }
 
+void ubxSetNavRate(Stream &port, uint16_t measRateMs)
+{
+    uint16_t navCycles = 1;
+    uint16_t timeRef = 0;
+
+    uint8_t payload[6];
+    memcpy(payload, &measRateMs, 2);
+    memcpy(payload + 2, &navCycles, 2);
+    memcpy(payload + 4, &timeRef, 2);
+
+    sendUBX(port, 0x06, 0x08, payload, sizeof(payload));
+    delay(100);
+}
+
+void ubxSetBaudRate(Stream &port, uint32_t baud)
+{
+    uint8_t  portID = 1;
+    uint8_t  reserved0 = 0;
+    uint16_t txReady = 0;
+    uint32_t mode = 0x000008D0;
+    uint16_t inProtoMask = 0x0001;
+    uint16_t outProtoMask = 0x0001;
+    uint16_t flags = 0;
+    uint16_t reserved5 = 0;
+
+    uint8_t payload[20] = {};
+    payload[0] = portID;
+    payload[1] = reserved0;
+    memcpy(payload + 2, &txReady, 2);
+    memcpy(payload + 4, &mode, 4);
+    memcpy(payload + 8, &baud, 4);
+    memcpy(payload + 12, &inProtoMask, 2);
+    memcpy(payload + 14, &outProtoMask, 2);
+    memcpy(payload + 16, &flags, 2);
+    memcpy(payload + 18, &reserved5, 2);
+
+    sendUBX(port, 0x06, 0x00, payload, sizeof(payload));
+    delay(100);
+}
+
 void ubxEnableNavMessages(Stream &port)
 {
     ubxSetMsgRate(port, 0x01, 0x02, 1); // NAV-POSLLH

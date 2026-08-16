@@ -13,6 +13,13 @@ typedef struct
     float gpsHeadingDeg;
     float speedKMH;
 
+    float posStdM;
+    float velStdMpS;
+
+    float posNIS;
+    float velNIS;
+
+    bool accurate;
     bool valid;
 } PosSol;
 

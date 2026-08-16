@@ -17,7 +17,7 @@ bool runAutopilot(SystemStatus& status, const SensorData& sensors, const Route& 
 
     const wp& target = route.waypoints[status.targetWaypoint];
 
-    if (distanceToPoint(sensors.ekf.lat, sensors.ekf.lon, target.lat, target.lon) <= WP_TRESHOLD)
+    if (distanceToPoint(sensors.kf.lat, sensors.kf.lon, target.lat, target.lon) <= WP_TRESHOLD)
     {
         status.targetWaypoint++;
 
@@ -37,12 +37,12 @@ bool runAutopilot(SystemStatus& status, const SensorData& sensors, const Route& 
     if (status.targetWaypoint == 1)
     {
         // First wp, steer straight at target
-        steerTo(headingToPoint(sensors.ekf.lat, sensors.ekf.lon, legEnd.lat, legEnd.lon));
+        steerTo(headingToPoint(sensors.kf.lat, sensors.kf.lon, legEnd.lat, legEnd.lon));
     }
     else
     {
         const wp& legStart = route.waypoints[status.targetWaypoint - 1];
-        steerTo(lookaheadHeading(sensors.ekf.lat, sensors.ekf.lon,
+        steerTo(lookaheadHeading(sensors.kf.lat, sensors.kf.lon,
                                  legStart.lat, legStart.lon,
                                  legEnd.lat, legEnd.lon));
     }

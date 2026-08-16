@@ -35,6 +35,10 @@ static uint32_t lastSolMs = 0;
 static uint32_t lastPollMs = 0;
 static uint32_t lastGoodFixMs = 0;
 
+static uint32_t currentITOW = 0;
+static uint32_t lastConsumedITOW = 0;
+static bool lastConsumedValid = false;
+
 static GPSData data = {};
 
 static void ubxChecksumStep(uint8_t b) {ubxCkA += b; ubxCkB += ubxCkA;}
@@ -99,11 +103,15 @@ static void handleVELNED()
 
 static void handleSOL()
 {
+    uint32_t iTOW;
+    memcpy(&iTOW, ubxPayload + 0, 4);
+
     uint8_t gpsFix = ubxPayload[10];
     uint8_t numSV = ubxPayload[47];
 
     data.fixType = gpsFix;
     data.satellites = numSV;
+    currentITOW = iTOW;
 
     solFixOk = (gpsFix == 0x03 || gpsFix == 0x04);
 
@@ -246,11 +254,19 @@ static void printGPSDebug()
 int GPSInit()
 {
     gpsSerial.setRxBufferSize(1024);
-    gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN);
-    delay(1000);    
+    gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN); // always start at factory default
+    delay(1000);
 
-    // Run once
-    //gpsRunOneTimeSetup(gpsSerial);
+    ubxDisableNMEA(gpsSerial);
+    ubxEnableSBAS(gpsSerial);
+    ubxSetNavRate(gpsSerial, 200); // 5 Hz
+    ubxEnableNavMessages(gpsSerial);
+
+    ubxSetBaudRate(gpsSerial, 38400);
+    gpsSerial.flush(); // make sure CFG-PRT bytes go out at 9600 before we switch
+    delay(50);
+    gpsSerial.updateBaudRate(38400);
+    delay(100);
 
     uint32_t start = millis();
     while (millis() - start < 3000)
@@ -269,6 +285,9 @@ GPSData getGPS()
     #if GPS_DEBUG
     printGPSDebug();
     #endif
+
+    data.freshFix = solFixOk && (!lastConsumedValid || currentITOW != lastConsumedITOW);
+    lastConsumedITOW = currentITOW;
 
     uint32_t now = millis();
     bool solFresh = (now - lastSolMs) < 1500;

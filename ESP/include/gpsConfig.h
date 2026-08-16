@@ -8,6 +8,8 @@ void ubxEnableSBAS(Stream &port);
 void ubxEnableNavMessages(Stream &port);
 void ubxDisableNMEA(Stream &port);
 void ubxSaveConfig(Stream &port);
+void ubxSetNavRate(Stream &port, uint16_t measRateMs);
+void ubxSetBaudRate(Stream &port, uint32_t baud);
 
 // Manual reset
 void ubxClearConfig(Stream &port);

@@ -260,8 +260,18 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
         {
+            uint8_t kfStatus;
+
+            if (!globalState.sensors.kf.valid || isnan(globalState.sensors.kf.posStdM)) {kfStatus = 255;}
+            else
+            {
+                uint32_t scaled = (uint32_t)(globalState.sensors.kf.posStdM * 10.0f);
+                kfStatus = (uint8_t)min(scaled, (uint32_t)100);
+            }
+            
+
             slowPkt.batt = globalState.status.battery;
-            slowPkt.gps = (uint8_t)(min((u_int)(globalState.sensors.gps.hAccM * 10), (u_int)UINT8_MAX));
+            slowPkt.gps = kfStatus;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
             slowPkt.lat = (int32_t)(globalState.sensors.gps.lat * 1e7);
             slowPkt.lon = (int32_t)(globalState.sensors.gps.lon * 1e7);

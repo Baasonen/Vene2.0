@@ -45,7 +45,7 @@ void sensorTask(void* pv)
         data.gps = getGPS();
         data.mag = getMagnetometer();
 
-        data.ekf = EKFUpdate(data.gps, data.mag);
+        data.kf = EKFUpdate(data.gps, data.mag);
 
         xQueueOverwrite(sensorQueue, &data);
     }
@@ -108,10 +108,10 @@ void controlTask(void* pv)
  
             case 3: // RETURN HOME
                 
-                if (distanceToPoint(status.home.lat, status.home.lon, sensors.ekf.lat, sensors.ekf.lon) > HOME_TRESHOLD)
+                if (distanceToPoint(status.home.lat, status.home.lon, sensors.kf.lat, sensors.kf.lon) > HOME_TRESHOLD)
                 {
                     setThrottle(status.APThrottle);
-                    steerTo(headingToPoint(sensors.ekf.lat, sensors.ekf.lon, status.home.lat, status.home.lon));
+                    steerTo(headingToPoint(sensors.kf.lat, sensors.kf.lon, status.home.lat, status.home.lon));
                 }
                 else
                 {
@@ -183,9 +183,10 @@ void diagTask(void* pv)
             Serial.println("\n--- VENE 2.0 ---");
             Serial.printf("Mode:    %u\n", status.mode);
             Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HACC: %.2f\n",
-                          sensors.ekf.valid ? "OK " : "BAD",
-                          sensors.ekf.lat, sensors.ekf.lon,
+                          sensors.kf.valid ? "OK " : "BAD",
+                          sensors.kf.lat, sensors.kf.lon,
                           sensors.gps.satellites, sensors.gps.hAccM);
+            Serial.printf("KF NIS: pos: %.2f vel: %.2f\n", sensors.kf.posNIS, sensors.kf.velNIS);
             Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
                           sensors.mag.valid ? "OK " : "BAD",
                           sensors.mag.heading, sensors.mag.accuracy);

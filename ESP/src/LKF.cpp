@@ -18,6 +18,8 @@
 
 #define MIN_VEL_STD_MPS 0.1f
 
+#define POS_STD_DEGRADED_M 4.0f
+
 // 1D constan velocity KF
 struct KF 
 {
@@ -26,6 +28,9 @@ struct KF
 
     float p00, p01, p11; // Covariance
 
+    float posNIS;
+    float velNIS;
+
     void reset(float pos0, float vel0, float posVar0, float velVar0)
     {
         pos = pos0;
@@ -33,6 +38,9 @@ struct KF
         p00 = posVar0;
         p01 = 0.0f;
         p11 = velVar0;
+
+        posNIS = 0.0f;
+        velNIS = 0.0f;
     }
 
     void predict(float dt, float qPos, float qVel)
@@ -54,6 +62,8 @@ struct KF
         float s = p11 + r;
         if (s <= 0.0f) {return;}
 
+        velNIS = (y * y) / s;
+
         float k0 = p01 / s;
         float k1 = p11 / s;
 
@@ -74,6 +84,8 @@ struct KF
         float y = z - pos;
         float s = p00 + r;
         if (s <= 0.0f) {return;}
+
+        posNIS = (y * y) / s;
 
         float k0 = p00 / s;
         float k1 = p01 / s;
@@ -164,7 +176,7 @@ void EKFInit()
 
 PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
 {
-    PosSol out = {0.0, 0.0, 0.0f, 0.0f, false};
+    PosSol out = {0};
 
     uint32_t now = millis();
 
@@ -222,7 +234,7 @@ PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
     east.predict(dt, qPos, qVel);
 
     // Correct with GPS pos
-    if (gps.valid)
+    if (gps.valid && gps.freshFix)
     {
         float measN, measE;
 
@@ -244,6 +256,9 @@ PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
         east.updateVel(gps.velE, rVel);
     }
 
+    out.posNIS = (north.posNIS + east.posNIS) / 2.0f;
+    out.velNIS = (north.velNIS + east.velNIS) / 2.0f;
+
     double lat, lon;
     toLLA(north.pos, east.pos, lat, lon);
 
@@ -251,6 +266,11 @@ PosSol EKFUpdate(const GPSData &gps, const MagData &mag)
 
     float headingDeg = atan2f(east.vel, north.vel) * RAD_TO_DEG;
     if (headingDeg < 0.0f) {headingDeg += 360.0f;}
+
+    out.posStdM = sqrtf(north.p00 + east.p00);
+    out.velStdMpS = sqrtf(north.p11 + east.p11);
+
+    out.accurate = (out.posStdM < POS_STD_DEGRADED_M);
 
     out.lat = lat;
     out.lon = lon;

@@ -23,6 +23,7 @@ typedef struct
     uint32_t unixTime;
     bool utcTimeValid;
     bool accDegraded;
+    bool freshFix;
     bool valid;
 } GPSData;
 
