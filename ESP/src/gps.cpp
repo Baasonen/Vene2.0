@@ -37,7 +37,6 @@ static uint32_t lastGoodFixMs = 0;
 
 static uint32_t currentITOW = 0;
 static uint32_t lastConsumedITOW = 0;
-static bool lastConsumedValid = false;
 
 static GPSData data = {};
 
@@ -286,7 +285,7 @@ GPSData getGPS()
     printGPSDebug();
     #endif
 
-    data.freshFix = solFixOk && (!lastConsumedValid || currentITOW != lastConsumedITOW);
+    data.freshFix = solFixOk && (currentITOW != lastConsumedITOW);
     lastConsumedITOW = currentITOW;
 
     uint32_t now = millis();

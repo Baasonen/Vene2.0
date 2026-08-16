@@ -463,7 +463,7 @@ class Controller:
         with self._data_lock:
             self._telemetry_data.update({
                 "battery": battery,
-                "hAcc": hAcc_raw / 10.0,
+                "hAcc": (hAcc_raw / 10.0) if hAcc_raw != 255 else "N/A",
                 "signal": signal_raw - 128,
                 "lat" : lat,
                 "lon" : lon,

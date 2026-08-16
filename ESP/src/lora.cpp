@@ -273,8 +273,8 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
             slowPkt.batt = globalState.status.battery;
             slowPkt.gps = kfStatus;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
-            slowPkt.lat = (int32_t)(globalState.sensors.gps.lat * 1e7);
-            slowPkt.lon = (int32_t)(globalState.sensors.gps.lon * 1e7);
+            slowPkt.lat = (int32_t)(globalState.sensors.kf.lat * 1e7);
+            slowPkt.lon = (int32_t)(globalState.sensors.kf.lon * 1e7);
 
             xSemaphoreGive(stateMutex);
             beginTransmit((uint8_t*)&slowPkt, sizeof(slowPkt));

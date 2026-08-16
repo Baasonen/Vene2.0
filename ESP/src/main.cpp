@@ -182,10 +182,10 @@ void diagTask(void* pv)
         {
             Serial.println("\n--- VENE 2.0 ---");
             Serial.printf("Mode:    %u\n", status.mode);
-            Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HACC: %.2f\n",
+            Serial.printf("GPS:     [%s]  %.6f, %.6f  Sats: %d  HACC: %.2f KF POS STD: %.2f\n",
                           sensors.kf.valid ? "OK " : "BAD",
                           sensors.kf.lat, sensors.kf.lon,
-                          sensors.gps.satellites, sensors.gps.hAccM);
+                          sensors.gps.satellites, sensors.gps.hAccM, sensors.kf.posStdM);
             Serial.printf("KF NIS: pos: %.2f vel: %.2f\n", sensors.kf.posNIS, sensors.kf.velNIS);
             Serial.printf("Heading: [%s]  %.1f deg  Acc: %u/3\n",
                           sensors.mag.valid ? "OK " : "BAD",
