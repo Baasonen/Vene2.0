@@ -253,7 +253,6 @@ class WaypointFrame(BaseFrame):
             self._path = self.map_widget.set_path(self.waypoints, color = self.theme["accent"], width = 3)
 
         self._update_route_length()
-        self._update_home_distance(self.ctrl.get_telemetry_data(), self.ctrl.get_connection_status())
 
         if self._list is not None:
             self._list.refresh_list()
@@ -266,8 +265,6 @@ class WaypointFrame(BaseFrame):
             self._route_changed = False
         self._prev_status = status
         self._refresh_progress(status, current, total)
-
-        self._update_home_distance(telemetry, connection)
 
     def _update_route_length(self) -> None:
         total_m = sum(
@@ -286,20 +283,8 @@ class WaypointFrame(BaseFrame):
 
         self._refresh_length_label()
 
-    def _update_home_distance(self, telemetry: dict, connection: dict) -> None:
-        lat, lon = telemetry["lat"], telemetry["lon"]
-        home_lat, home_lon = connection["home_lat"], connection["home_lon"]
-
-        if connection["home_set"] and lat != 0.0 and lon != 0.0:
-            dist = _haversine_m(home_lat, home_lon, lat, lon)
-            self._home_text = f"Dist. To Home: {dist:.0f} m" if dist < 1000 else f"Dist. To Home: {dist / 1000:.2f} km"
-        else:
-            self._home_text = ""
-
-        self._refresh_length_label()
-
     def _refresh_length_label(self) -> None:
-        self.length_label.config(text=f"{getattr(self, '_route_text', '0 Waypoints / 0 m')}   {getattr(self, '_home_text', '')}")
+        self.length_label.config(text=f"{getattr(self, '_route_text', '0 Waypoints / 0 m')}")
 
     def _refresh_progress(self, status: uploadStatus, current: int, total: int) -> None:
         if status == uploadStatus.UPLOADING:
@@ -322,14 +307,14 @@ class WaypointFrame(BaseFrame):
             self._set_status("Current Route Not Uploaded", "dirty")
         else:
             self.progress_var.set(100)
-            self._set_status(f"Uploaded ({total} Waypoints)", "done")
+            self._set_status(f"Uploaded Succesfully", "done")
 
     def _status_color(self, state: str) -> str:
         return {
             "uploading": self.theme["accent"],
             "done": self.theme["green"],
             "error": self.theme["red"],
-            "dirty": self.theme["orange"],
+            "dirty": self.theme["red"],
             "idle": self.theme["fg_dim"],
         }.get(state, self.theme["fg"])
     

@@ -135,6 +135,9 @@ class MapFrame(BaseFrame):
         self.cmb_overlay.bind("<<ComboboxSelected>>", lambda _event: self._on_overlay_mode_change())
         self.cmb_overlay.pack(side = "right", padx = 6)
 
+        tk.Label(self.toolbar, text = "Nav Overlay: ", font = ("Segoe UI", 9), bg = self.theme["panel_bg"], fg = self.theme["fg"]
+                        ).pack(side = "right", padx = (6, 2))
+
         self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
         self.widget.pack(fill = "both", expand = True)
         self.widget.set_zoom(16)
