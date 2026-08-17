@@ -135,8 +135,8 @@ class MapFrame(BaseFrame):
         self.cmb_overlay.bind("<<ComboboxSelected>>", lambda _event: self._on_overlay_mode_change())
         self.cmb_overlay.pack(side = "right", padx = 6)
 
-        tk.Label(self.toolbar, text = "Nav Overlay: ", font = ("Segoe UI", 9), bg = self.theme["panel_bg"], fg = self.theme["fg"]
-                        ).pack(side = "right", padx = (6, 2))
+        self.nav_overlay_label = tk.Label(self.toolbar, text = "Nav Overlay: ", font = ("Segoe UI", 9), bg = self.theme["panel_bg"], fg = self.theme["fg"])
+        self.nav_overlay_label.pack(side = "right", padx = (6, 2))
 
         self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
         self.widget.pack(fill = "both", expand = True)
@@ -153,7 +153,7 @@ class MapFrame(BaseFrame):
         self.widget.canvas.bind("<Double-Button-1>", self._on_map_double_click)
 
         self.speedo = SpeedoOverlay(self.widget)
-        self.heading = HeadingOverlay(self.widget)
+        self.heading = HeadingOverlay(self.widget, self.ctrl)
 
         self.speedo.frame.bind("<Configure>", self._sync_overlays)
 
@@ -401,6 +401,8 @@ class MapFrame(BaseFrame):
         super().apply_theme(theme)
 
         self.frame.config(bg = theme["panel_bg"], fg = theme["fg"])
+
+        self.nav_overlay_label.config(bg = theme["panel_bg"], fg = theme["fg"])
 
         self.toolbar.config(bg = theme["panel_bg"])
         self.chk_follow.config(bg = theme["panel_bg"], fg = theme["fg"],

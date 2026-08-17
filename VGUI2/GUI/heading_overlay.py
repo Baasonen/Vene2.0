@@ -8,15 +8,20 @@ COMPASS_PAD = 9
 MAX_HEADING_ACC = 3
 OVERLAY_GAP = 8
 
+MAG_ACC_BIT_NAMES = ["HDG_A1", "HDG_A2", "HDG_A3"]
+
 class HeadingOverlay:
-    def __init__(self, parent):
+    def __init__(self, parent, ctrl):
         self._parent = parent
+        self._ctrl = ctrl
 
         self._heading_deg: float = 0.0
         self._have_heading: bool = False
         self._heading_acc: int = 0
         self._grid_color: str = "gray"
         self._pointer_color: str = "red"
+
+        self._acc_bits = [self._find_bit(name) for name in MAG_ACC_BIT_NAMES]
 
         self.frame = tk.Frame(parent, bd = 1, relief = "solid")
         self.frame.place(in_ = parent, relx = 1.0, rely = 0.0, x = OVERLAY_X, y = OVERLAY_TOP_Y, anchor = "ne")
@@ -38,6 +43,13 @@ class HeadingOverlay:
 
         self._draw_compass()
         self.frame.lift()
+
+    def _find_bit(self, name: str):
+        for bit, (defname, _desc) in self._ctrl.error_defs.items():
+            if defname == name:
+                return bit
+
+        return None
 
     def _draw_compass(self) -> None:
         self.canvas.delete("all")
@@ -86,13 +98,17 @@ class HeadingOverlay:
                                 outline = "", tags = "pointer")
 
     def update(self, telemetry: dict) -> None:
-        lat, lon = telemetry["lat"], telemetry["lon"]
-        have_fix = lat != 0.0 or lon != 0.0
+        error = telemetry.get("error", 0)
 
-        self._have_heading = have_fix
-        self._heading_deg = telemetry["heading"] % 360 if have_fix else 0.0
-        self._heading_acc = max(0, min(MAX_HEADING_ACC, telemetry.get("headingAcc", 0)))
+        level = 0
+        for i, bit in enumerate(self._acc_bits, start = 1):
+            if bit is not None and error >> bit & 1:
+                level = i
 
+        self._heading_acc = level
+        self._have_heading = level > 0
+        self._heading_deg = telemetry["headings"] % 360 if self._have_heading else 0.0
+        
         self.lbl_heading_val.config(text = f"{round(self._heading_deg):03d}°" if self._have_heading else "---°")
         self.lbl_acc_val.config(text = f"Acc: {self._heading_acc} / {MAX_HEADING_ACC}")
 
