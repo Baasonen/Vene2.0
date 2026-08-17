@@ -7,7 +7,7 @@ const float radToDeg = 180.0 / M_PI;
 
 #define EARTHRADIUS 6371000.0
 
-#define LOOKAHEAD_DISTANCE 8.0f
+#define LOOKAHEAD_DISTANCE 6.0f
 
 float distanceToPoint(double lat1, double lon1, double lat2, double lon2);
 float headingToPoint(double lat1, double lon1, double lat2, double lon2);

@@ -149,11 +149,24 @@ static void ubxDispathc()
 
     switch (ubxId)
     {
-        case 0x02: if (ubxLen >= 28) {handlePOSLLH(); break;}
-        case 0x12: if (ubxLen >= 36) {handleVELNED(); break;}
-        case 0x06: if (ubxLen >= 52) {handleSOL(); break;}
-        case 0x21: if (ubxLen >= 20) {handleTIMEUTC(); break;}
-        default: break;
+        case 0x02: 
+            if (ubxLen >= 28) {handlePOSLLH();}
+            break;
+
+        case 0x12: 
+            if (ubxLen >= 36) {handleVELNED();}
+            break;
+
+        case 0x06: 
+            if (ubxLen >= 52) {handleSOL();}
+            break;
+
+        case 0x21: 
+            if (ubxLen >= 20) {handleTIMEUTC();}
+            break;
+
+        default: 
+            break;
     }
 }
 

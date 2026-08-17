@@ -190,7 +190,7 @@ PosSol LKFUpdate(const GPSData &gps, const MagData &mag)
     if (dt > 1.0f) {dt = 1.0f;}
     lastUpdateMs = now;
 
-    if (gps.valid) {lastValidFixMs = now;}
+    if (gps.valid && gps.freshFix) {lastValidFixMs = now;}
 
     if (!initialized)
     {

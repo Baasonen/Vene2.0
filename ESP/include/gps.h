@@ -13,9 +13,9 @@ typedef struct
     float speedKMH;
     float headingDeg;
 
-    int32_t velN;
-    int32_t velE;
-    uint32_t velAccM;
+    float velN;
+    float velE;
+    float velAccM;
 
     float hAccM;
     uint8_t fixType;

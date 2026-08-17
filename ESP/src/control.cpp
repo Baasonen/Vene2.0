@@ -62,7 +62,12 @@ void steerTo(float targetHeading)
     float dt = (lastSteerTime == 0) ? 0.05f : (now - lastSteerTime) / 1000.0f;
     lastSteerTime = now;
 
-    if (abs(error) < deadzone) {return;}
+    if (abs(error) < deadzone) 
+    {
+        turnRudder(0);
+
+        return;
+    }
 
     float rawAngle = (error * Kp) + (iError * Ki);
     bool saturated = (rawAngle > RUDDER_U_LIM) || (rawAngle < RUDDER_L_LIM);
