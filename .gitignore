@@ -11,3 +11,9 @@
 *.bin
 *.elf
 *.map
+
+# Routes
+*.rte
+
+# Vgui telemetry
+/VGUI2/Telemetry/

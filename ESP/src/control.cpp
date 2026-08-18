@@ -26,7 +26,7 @@ void turnRudder(int8_t angle)
     if (angle > RUDDER_U_LIM) {angle = RUDDER_U_LIM;}
     if (angle < RUDDER_L_LIM) {angle = RUDDER_L_LIM;}
 
-    rudder.write(angle + 90);
+    rudder.write(angle + 85); // Should be 90, quick fix to center rudder
 }
 
 void setThrottle(int8_t throttle)

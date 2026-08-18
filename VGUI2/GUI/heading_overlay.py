@@ -107,7 +107,7 @@ class HeadingOverlay:
 
         self._heading_acc = level
         self._have_heading = level > 0
-        self._heading_deg = telemetry["headings"] % 360 if self._have_heading else 0.0
+        self._heading_deg = telemetry["heading"] % 360 if self._have_heading else 0.0
         
         self.lbl_heading_val.config(text = f"{round(self._heading_deg):03d}°" if self._have_heading else "---°")
         self.lbl_acc_val.config(text = f"Acc: {self._heading_acc} / {MAX_HEADING_ACC}")
