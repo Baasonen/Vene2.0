@@ -17,7 +17,7 @@ bool runAutopilot(SystemStatus& status, const SensorData& sensors, const Route& 
 
     const wp& target = route.waypoints[status.targetWaypoint];
 
-    if (distanceToPoint(sensors.kf.lat, sensors.kf.lon, target.lat, target.lon) <= WP_TRESHOLD)
+    if (distanceToPoint(sensors.kf.lat, sensors.kf.lon, target.lat, target.lon) <= WP_TRESHOLD_M)
     {
         status.targetWaypoint++;
 

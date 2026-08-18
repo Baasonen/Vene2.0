@@ -21,9 +21,9 @@
 #include "autopilot.h"
 #include "led.h"
 #include "LKF.h"
+#include "tuning.h"
 
 #define WDT_TIMEOUT 5
-#define HOME_TRESHOLD 5
 
 Preferences prefs;
 
@@ -108,7 +108,7 @@ void controlTask(void* pv)
  
             case 3: // RETURN HOME
                 
-                if (distanceToPoint(status.home.lat, status.home.lon, sensors.kf.lat, sensors.kf.lon) > HOME_TRESHOLD)
+                if (distanceToPoint(status.home.lat, status.home.lon, sensors.kf.lat, sensors.kf.lon) > HOME_TRESHOLD_M)
                 {
                     setThrottle(status.APThrottle);
                     steerTo(headingToPoint(sensors.kf.lat, sensors.kf.lon, status.home.lat, status.home.lon));

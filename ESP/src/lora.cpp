@@ -3,20 +3,12 @@
 #include "errors.h"
 #include "packet_handlers.h"
 
-#define LORA_TIMEOUT_MS 20000
-
 SX1276 radio = new Module(LORA_CS, LORA_DIO0, LORA_RST, -1);
 static int8_t lastRSSI = 0;
 static uint32_t txStartTime = 0;
 
-#define DUTY_CYCLE_WINDOW_MS 60000UL  // 60s
-#define DUTY_CYCLE_LIMIT_PCT 10.0f
 static uint32_t dutyWindowStart = 0;
 static uint32_t dutyAirtimeMs = 0;
-
-#define SLOW_TELE_PERIOD_MS 2700
-#define FAST_TELE_PERIOD_MS 1000
-#define BE_TELE_PERIOD_MS 15300
 
 enum LoRaDir {LORA_DIR_RX, LORA_DIR_TX};
 static volatile LoRaDir loraDir = LORA_DIR_RX;
@@ -149,35 +141,35 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
     switch (packetID)
     {
         case PKT_WP_DATA:
-            if (len == sizeof(routePacket)) 
+            if (len == sizeof(RoutePacket)) 
             {
                 handleRoutePacket(rxBuffer, lastPacketReceivedTime, lastRoutePacketTime, tempRoute, wpReceived, receivedCount);
             }
             break;
 
         case PKT_CONTROL:
-            if (len == sizeof(controlPacket)) 
+            if (len == sizeof(ControlPacket)) 
             {
                 handleControlPacket(rxBuffer, lastPacketReceivedTime);
             }
             break;
 
         case PKT_DATA:
-            if (len == sizeof(dataPacket)) 
+            if (len == sizeof(DataPacket)) 
             {
                 handleDataPacket(rxBuffer, lastPacketReceivedTime);
             }
             break;
 
         case PKT_RESET_ERRORS:
-            if (len == sizeof(resetErrorsPacket)) 
+            if (len == sizeof(ResetErrorsPacket)) 
             {
                 handleResetErrorsPacket();
             }
             break;
 
         case PKT_HOME_SET:
-            if (len == sizeof(homeSetPacket)) 
+            if (len == sizeof(HomeSetPacket)) 
             {
                 handleHomeSetPacket(rxBuffer, lastPacketReceivedTime);
             }
@@ -191,21 +183,21 @@ void rxTask(uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime,
             break;
 
         case PKT_TIME_DATA:
-            if (len == sizeof(timeDataPacket)) 
+            if (len == sizeof(TimeDataPacket)) 
             {
                 handleTimeDataPacket(rxBuffer, lastPacketReceivedTime);
             }
             break;
 
         case PKT_COURSE_SET:
-            if (len == sizeof(courseSetPacket)) 
+            if (len == sizeof(CourseSetPacket)) 
             {
                 handleCourseSetPacket(rxBuffer, lastPacketReceivedTime);
             }
             break;
 
         case PKT_THR_SET:
-            if (len == sizeof(throttlePacket))
+            if (len == sizeof(ThrottlePacket))
             {
                 handleThrottleSetPacket(rxBuffer, lastPacketReceivedTime);
             }
@@ -235,7 +227,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
     
     if (millis() - lastFastTele > FAST_TELE_PERIOD_MS)
     {
-        telemetryFastPacket fastPkt = {};
+        TelemetryFastPacket fastPkt = {};
         fastPkt.packetID = PKT_TELE_FAST;
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
@@ -255,7 +247,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
 
     if (millis() - lastSlowTele > SLOW_TELE_PERIOD_MS)
     {   
-        telemetrySlowPacket slowPkt = {};
+        TelemetrySlowPacket slowPkt = {};
         slowPkt.packetID = PKT_TELE_SLOW;
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(20)) == pdTRUE)
@@ -286,7 +278,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
     }
 
     bool sendBE = false;
-    beTelemetryPacket bePkt = {};
+    BeTelemetryPacket bePkt = {};
     bePkt.packetID = PKT_BE_TELE;
 
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
@@ -300,7 +292,7 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
 
         if (sendBE)
         {
-            beginTransmit((uint8_t*)&bePkt, sizeof(beTelemetryPacket));
+            beginTransmit((uint8_t*)&bePkt, sizeof(BeTelemetryPacket));
 
             lastBETele = millis();
             lastErrorCode = bePkt.errorCode;

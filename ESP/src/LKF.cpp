@@ -5,21 +5,6 @@
 
 #define EARTHRADIUS_M 6371000.0
 
-#define Q_POS_RATE 0.02f
-#define Q_VEL_RATE_STRAIGHT 0.15f
-#define Q_VEL_RATE_TURN 4.0f
-
-#define TURN_RATE_THRESHOLD_DEG 8.0f
-#define MIN_MAG_ACCURACY 1
-
-#define MIN_MEAS_STD_M 0.8f 
-
-#define REAQUIRE_TIMEOUT_MS 10000UL
-
-#define MIN_VEL_STD_MPS 0.1f
-
-#define POS_STD_DEGRADED_M 4.0f
-
 // 1D constan velocity KF
 struct KF 
 {

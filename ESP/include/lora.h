@@ -7,6 +7,7 @@
 #include "esp_task_wdt.h"
 
 #include "state.h"
+#include "tuning.h"
 
 #define LORA_SCK 14
 #define LORA_MISO 26
@@ -44,7 +45,7 @@
 
 #pragma pack(push, 1)
 
-struct telemetryFastPacket
+struct TelemetryFastPacket
 {
     uint8_t packetID; // 0x02
     uint16_t heading;
@@ -52,7 +53,7 @@ struct telemetryFastPacket
     uint8_t targetIdx; 
 };
 
-struct telemetrySlowPacket
+struct TelemetrySlowPacket
 {
     uint8_t packetID; // 0x03
     uint8_t batt;
@@ -62,7 +63,7 @@ struct telemetrySlowPacket
     int32_t lon;
 };
 
-struct beTelemetryPacket
+struct BeTelemetryPacket
 {   
     uint8_t packetID;
     uint8_t c1;
@@ -71,7 +72,7 @@ struct beTelemetryPacket
     uint32_t errorCode;
 };
 
-struct routePacket
+struct RoutePacket
 {
     uint8_t packetID; // 0x01
     uint8_t id;
@@ -81,57 +82,57 @@ struct routePacket
     uint8_t ammnt;
 };
 
-struct resetErrorsPacket
+struct ResetErrorsPacket
 {
     uint8_t packetID; // 0x07
 };
 
-struct dataPacket
+struct DataPacket
 {
     uint8_t packetID; // 0x10
     uint8_t id;
     uint8_t data;
 };
 
-struct controlPacket
+struct ControlPacket
 {
     uint8_t packetID;
     uint8_t mode;
 };
 
-struct homeSetPacket // From GUI: Set homeWP
+struct HomeSetPacket // From GUI: Set homeWP
 {
     uint8_t packedID; // 0x08
     double lat;
     double lon;
 };
 
-struct homeDataPacket // Respond to PKT_HOME_REQ from GUI
+struct HomeDataPacket // Respond to PKT_HOME_REQ from GUI
 {
     uint8_t packetID; // 0x09
     double lat;
     double lon;
 };
 
-struct timeDataPacket
+struct TimeDataPacket
 {
     uint8_t packetID; // 0x0C
     uint32_t unixTime;
 };
 
-struct courseSetPacket
+struct CourseSetPacket
 {
     uint8_t packetID;
     int16_t course;
 };
 
-struct courseDataPacket
+struct CourseDataPacket
 {
     uint8_t packetID;
     int16_t course;
 };
 
-struct throttlePacket
+struct ThrottlePacket
 {
     uint8_t packetID;
     int8_t throttle;

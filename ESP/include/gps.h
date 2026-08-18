@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "tuning.h"
+
 #define GPSRXPIN 5
 #define GPSTXPIN 18
 

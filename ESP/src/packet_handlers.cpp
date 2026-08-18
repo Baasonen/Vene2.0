@@ -9,7 +9,7 @@ void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint
     lastPacketReceivedTime = millis();
     lastRoutePacketTime = millis();
 
-    routePacket* rp = (routePacket*)rxBuffer;
+    RoutePacket* rp = (RoutePacket*)rxBuffer;
     Serial.printf("[LORA] Received Route Packet %i\n", rp->order);
 
     if (rp->order == 0)
@@ -22,7 +22,7 @@ void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint
 
     if ((rp->id == tempRoute.id) && (rp->order < WP_AMMNT_LIM))
     {
-        dataPacket ack = {PKT_DATA, rp->id, rp->order};
+        DataPacket ack = {PKT_DATA, rp->id, rp->order};
         beginTransmit((uint8_t*)&ack, sizeof(ack));
 
         if (!wpReceived[rp->order])
@@ -55,9 +55,9 @@ void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint
 void handleControlPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 {
     lastPacketReceivedTime = millis();
-    controlPacket* cp = (controlPacket*)rxBuffer;
+    ControlPacket* cp = (ControlPacket*)rxBuffer;
 
-    dataPacket ack = {PKT_DATA, 255, cp->mode};
+    DataPacket ack = {PKT_DATA, 255, cp->mode};
 
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
     {
@@ -72,7 +72,7 @@ void handleControlPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 
 void handleDataPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 {
-    dataPacket* dp = (dataPacket*)rxBuffer;
+    DataPacket* dp = (DataPacket*)rxBuffer;
 
     if (dp->id == 254)
     {
@@ -98,14 +98,14 @@ void handleResetErrorsPacket()
         xSemaphoreGive(stateMutex);
     }
 
-    dataPacket ack = {PKT_DATA, 254, PKT_RESET_ERRORS};
+    DataPacket ack = {PKT_DATA, 254, PKT_RESET_ERRORS};
     beginTransmit((uint8_t*)&ack, sizeof(ack));
 }
 
 void handleHomeSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 {
     lastPacketReceivedTime = millis();
-    homeSetPacket* hp = (homeSetPacket*)rxBuffer;
+    HomeSetPacket* hp = (HomeSetPacket*)rxBuffer;
 
     if (hp->lat != 0.0 || hp->lon != 0.0)
     {
@@ -123,7 +123,7 @@ void handleHomeSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
         Serial.printf("[LORA] Home set: %.6f, %.6f\n", hp->lat, hp->lon);
     }
 
-    dataPacket ack = {PKT_DATA, PKT_HOME_SET, 0x01};
+    DataPacket ack = {PKT_DATA, PKT_HOME_SET, 0x01};
     beginTransmit((uint8_t*)&ack, sizeof(ack));
 }
 
@@ -131,7 +131,7 @@ void handleHomeReqPacket(uint32_t &lastPacketReceivedTime)
 {
     lastPacketReceivedTime = millis();
 
-    homeDataPacket resp = {};
+    HomeDataPacket resp = {};
     resp.packetID = PKT_HOME_DATA;
 
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
@@ -151,7 +151,7 @@ void handleHomeReqPacket(uint32_t &lastPacketReceivedTime)
 void handleTimeDataPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 {
     lastPacketReceivedTime = millis();
-    timeDataPacket* tp = (timeDataPacket*)rxBuffer;
+    TimeDataPacket* tp = (TimeDataPacket*)rxBuffer;
 
     bool homeSetLocal = false;
     double homeLatLocal = 0.0;
@@ -189,9 +189,9 @@ void handleTimeDataPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 void handleCourseSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 {
     lastPacketReceivedTime = millis();
-    courseSetPacket* cp = (courseSetPacket*)rxBuffer;
+    CourseSetPacket* cp = (CourseSetPacket*)rxBuffer;
 
-    courseDataPacket response = {};
+    CourseDataPacket response = {};
     response.packetID = PKT_COURSE_DATA;
 
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE) 
@@ -212,9 +212,9 @@ void handleCourseSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 void handleThrottleSetPacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime)
 {
     lastPacketReceivedTime = millis();
-    throttlePacket* tp = (throttlePacket*)rxBuffer;
+    ThrottlePacket* tp = (ThrottlePacket*)rxBuffer;
 
-    throttlePacket response =  {};
+    ThrottlePacket response =  {};
     response.packetID = PKT_THR_DATA;
 
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)

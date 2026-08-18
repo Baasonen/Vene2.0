@@ -4,6 +4,7 @@
 
 #include "magnetometer.h"
 #include "gps.h"
+#include "tuning.h"
 
 typedef struct 
 {

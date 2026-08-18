@@ -12,7 +12,7 @@ float distanceToPoint(double lat1, double lon1, double lat2, double lon2)
 
     float res = sqrt(dLon * dLon + dLat * dLat);
 
-    return res * EARTHRADIUS;
+    return res * EARTHRADIUS_M;
 }
 
 float headingToPoint(double lat1, double lon1, double lat2, double lon2)
@@ -36,8 +36,8 @@ static void toLocalMeters(double lat, double lon, double refLat, double refLon, 
     float dLat = (lat - refLat) * degToRad;
     float dLon = (lon - refLon) * degToRad;
 
-    y = dLat * EARTHRADIUS;
-    x = dLon * cos(refLat * degToRad) * EARTHRADIUS;
+    y = dLat * EARTHRADIUS_M;
+    x = dLon * cos(refLat * degToRad) * EARTHRADIUS_M;
 }
 
 float lookaheadHeading(double lat, double lon, double prevLat, double prevLon,
