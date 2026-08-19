@@ -24,7 +24,10 @@ class SpeedoOverlay:
         self._last_fix_latlon: Optional[Tuple[float, float]] = None
         self._last_fix_time: float = 0.0
         self._fix_buffer: deque = deque()
+
         self._top_speed_mps: float = 0.0
+        self._total_dist_m: float = 0.0
+
         self._cur_speed_mps: Optional[float] = None
         self._avg_window_idx: int = AVG_WINDOW_OPTIONS.index(DEFAULT_AVG_WINDOW)
         self._unit_idx: int = 0
@@ -49,6 +52,9 @@ class SpeedoOverlay:
         self.lbl_top_val = tk.Label(self.frame, text = "Top: -- kn", font = ("Segoe UI", 11))
         self.lbl_top_val.pack(padx = 10, pady = (0, 4))
 
+        self.lbl_total_dist = tk.Label(self.frame, text = "Dist: 0 m", font = ("Segoe UI", 11))
+        self.lbl_total_dist.pack(padx = 10, pady = (0, 4))
+
         self.win_row = tk.Frame(self.frame)
         self.win_row.pack(padx = 8, pady = (0, 4))
 
@@ -61,7 +67,7 @@ class SpeedoOverlay:
         ttk.Button(self.win_row, text = "+", width = 2,
                    command = self._increase_avg_window).pack(side = "left")
 
-        ttk.Button(self.frame, text = "Reset Top",
+        ttk.Button(self.frame, text = "Reset",
                   command = self._reset_top_speed).pack(padx = 8, pady = (0, 8), fill = "x")
 
         self._update_avg_window_label()
@@ -80,6 +86,8 @@ class SpeedoOverlay:
 
     def _reset_top_speed(self) -> None:
         self._top_speed_mps = 0.0
+        self._total_dist_m = 0.0
+
         self._refresh_speed_labels()
 
     def _cycle_unit(self, _event = None) -> None:
@@ -98,6 +106,14 @@ class SpeedoOverlay:
         self.lbl_speed_unit.config(text = unit)
 
         self.lbl_top_val.config(text = f"Top: {self._top_speed_mps * factor:0.1f} {unit}")
+
+        self.lbl_total_dist.config(text = f"Dist: {self._format_dist(self._total_dist_m)}")
+
+    @staticmethod
+    def _format_dist(dist_m: float) -> str:
+        if dist_m < 1000.0:
+            return f"{dist_m:0.0f} m"
+        return f"{dist_m / 1000.0:0.2f} km"
 
     @staticmethod
     def _haversine_m(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
@@ -119,6 +135,7 @@ class SpeedoOverlay:
         if dt > 0:
             dist_m = self._haversine_m(self._last_fix_latlon, coord)
             self._fix_buffer.append((now, dist_m, dt))
+            self._total_dist_m += dist_m
 
         self._last_fix_latlon = coord
         self._last_fix_time = now
@@ -187,4 +204,5 @@ class SpeedoOverlay:
         self.lbl_speed_num.config(bg = theme["panel_bg"], fg = theme["fg"])
         self.lbl_speed_unit.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
         self.lbl_top_val.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
+        self.lbl_total_dist.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
         self.lbl_avg_window.config(bg = theme["panel_bg"], fg = theme["fg_dim"])
