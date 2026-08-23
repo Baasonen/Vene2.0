@@ -21,7 +21,7 @@ int magInit()
         return 0;
     }
 
-    if (!bno085.enableReport(SH2_ARVR_STABILIZED_ROTATION_VECTOR, 10000)) // 100 Hz
+    if (!bno085.enableReport(SH2_ROTATION_VECTOR, 10000)) // 100 Hz
     {
         Serial.println("[MAG] Could not enable stablized rotation vector");
         return 0;
@@ -51,7 +51,7 @@ MagData getMagnetometer()
     }
 
     if (bno085.getSensorEvent(&sensorValue)) {
-        if (sensorValue.sensorId == SH2_ARVR_STABILIZED_ROTATION_VECTOR) {
+        if (sensorValue.sensorId == SH2_ROTATION_VECTOR) {
             
             float r = sensorValue.un.rotationVector.real;
             float i = sensorValue.un.rotationVector.i;

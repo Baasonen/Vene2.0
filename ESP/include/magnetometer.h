@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 
-#define SH2_ARVR_STABILIZED_ROTATION_VECTOR 0x28
+#define SH2_ROTATION_VECTOR 0x05
 
 typedef struct 
 {
