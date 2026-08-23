@@ -10,6 +10,7 @@ void ubxDisableNMEA(Stream &port);
 void ubxSaveConfig(Stream &port);
 void ubxSetNavRate(Stream &port, uint16_t measRateMs);
 void ubxSetBaudRate(Stream &port, uint32_t baud);
+void ubxDisableStaticHold(Stream &port);
 
 // Manual reset
 void ubxClearConfig(Stream &port);

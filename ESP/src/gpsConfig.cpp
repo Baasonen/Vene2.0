@@ -134,6 +134,24 @@ void ubxEnableSBAS(Stream &port)
     delay(400);
 }
 
+void ubxDisableStaticHold(Stream &port)
+{
+    uint8_t payload[36] = {0};
+
+    // Bitmask for parameters: 0x41 (0 and 6)
+    payload[0] = 0x41;
+    payload[1] = 0x00;
+
+    // Dynamic model (5 = sea)
+    payload[2] = 0x05;
+
+    // Static hold thr. (0 = disable)
+    payload[22] = 0x00;
+
+    sendUBX(port, 0x06, 0x24, payload, sizeof(payload));
+    delay(100);
+} 
+
 void ubxSaveConfig(Stream &port)
 {
     const uint8_t payload[] = {

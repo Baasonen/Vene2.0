@@ -271,6 +271,7 @@ int GPSInit()
     ubxEnableSBAS(gpsSerial);
     ubxSetNavRate(gpsSerial, 200); // 5 Hz
     ubxEnableNavMessages(gpsSerial);
+    ubxDisableStaticHold(gpsSerial);
 
     ubxSetBaudRate(gpsSerial, 38400);
     gpsSerial.flush(); // make sure CFG-PRT bytes go out at 9600 before we switch
