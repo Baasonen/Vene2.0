@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 
+#include "esp_system.h"
+
 #include "setup.h"
 
 const char* ssid = "VENE2.0";
@@ -11,6 +13,10 @@ const int udpTxPort = 4210;
 const int udpRxPort = 4211;
 
 #define LORA_TX_TIMEOUT_MS 750
+
+#define CAD_MAX_ATTEMPTS 3
+#define CAD_BACKOFF_MIN_MS 2
+#define CAD_BACKOFF_MAX_MS 10
 
 WiFiUDP udp;
 bool udpReady = false;
@@ -40,8 +46,35 @@ void IRAM_ATTR onLoraDio0Rise()
     if (woken) {portYIELD_FROM_ISR();}
 }
 
+static bool channelClear()
+{
+    detachInterrupt(digitalPinToInterrupt(LORA_DIO0));
+
+    xSemaphoreTake(rxPacketSem, 0);
+    xSemaphoreTake(txDoneSem, 0);
+
+    int16_t cad = radio.scanChannel();
+
+    attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDio0Rise, RISING);
+
+    return (cad == RADIOLIB_CHANNEL_FREE);
+}
+
 void beginTransmit(uint8_t* data, size_t len)
 {
+    for (int attempt = 0; attempt < CAD_MAX_ATTEMPTS; attempt++)
+    {
+        if (channelClear()) {break;}
+
+        loraDir = LORA_DIR_RX;
+        radio.startReceive();
+
+        uint32_t backoff = CAD_BACKOFF_MIN_MS + (esp_random() % CAD_BACKOFF_MAX_MS);
+        vTaskDelay(pdMS_TO_TICKS(backoff));
+    }
+
+    radio.standby();
+
     txStartTime = millis();
     loraDir = LORA_DIR_TX;
     radio.startTransmit(data, len);
@@ -82,7 +115,7 @@ void setup()
 
     if (state == RADIOLIB_ERR_NONE)
     {
-        radio.setDio0Action(onLoraDio0Rise, RISING);
+        attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDio0Rise, RISING);
         loraDir = LORA_DIR_RX;
         radio.startReceive();
     }

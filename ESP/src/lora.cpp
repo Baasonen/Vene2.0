@@ -32,8 +32,34 @@ void IRAM_ATTR onLoraDIO0Rise()
     if (woken) {portYIELD_FROM_ISR();}
 }
 
+static bool channelClear()
+{
+    detachInterrupt(digitalPinToInterrupt(LORA_DIO0));
+
+    xSemaphoreTake(rxPacketSem, 0);
+    xSemaphoreTake(txDoneSem, 0);
+
+    int16_t cad = radio.scanChannel();
+
+    attachInterrupt(digitalPinToInterrupt(LORA_DIO0), onLoraDIO0Rise, RISING);
+
+    return (cad == RADIOLIB_CHANNEL_FREE);
+}
+
 void beginTransmit(uint8_t* data, size_t len)
 {
+    for (int attempt = 0; attempt < CAD_MAX_ATTEMPTS; attempt++)
+    {
+        if (channelClear()) {break;}
+
+        loraDir = LORA_DIR_RX;
+        radio.startReceive();
+
+        uint32_t backoff = CAD_BACKOFF_MIN_MS + (esp_random() % CAD_BACKOFF_MAX_MS);
+        vTaskDelay(pdMS_TO_TICKS(backoff));
+    }
+
+    radio.standby();
     txStartTime = millis();
     loraDir = LORA_DIR_TX;
     radio.startTransmit(data, len);
