@@ -1,11 +1,5 @@
 #include "errors.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
-#include "esp_task_wdt.h"
-
 #define ERROR_TASK_PERIOD_MS 200
 #define WI_SAMPLE_PERIOD_MS 2000
 #define WI_SAMPLE_DIVIDER (WI_SAMPLE_PERIOD_MS / ERROR_TASK_PERIOD_MS)
@@ -84,7 +78,7 @@ void errorTask(void* pv)
         setErrorIf(ERR_MAG_FAIL, debounce(magFailDb, !sensors.mag.valid));
         setErrorIf(ERR_GPS_ACC_LOW, debounce(gpsAccDb, !sensors.kf.accurate, GPS_DEBOUNCE_THRESHOLD));
         setErrorIf(ERR_MAG_ACC_LOW, debounce(magAccDb, sensors.mag.accuracy < MAG_MIN_ACC));
-        setErrorIf(ERR_BATT_LOW, debounce(battDb, status.battery < BATT_LOW_TRESHOLD));
+        //setErrorIf(ERR_BATT_LOW, debounce(battDb, status.battery < BATT_LOW_TRESHOLD));
         setErrorIf(ERR_KF_UNINIT, !sensors.kf.valid);
 
         setErrorIf(ERR_LORA_TIMEOUT, status.loraTimeout);

@@ -52,4 +52,11 @@
 
 #define MIN_VEL_STD_MPS 0.1f
 
+#define VEL_FLOOR_SPEED_MPS 0.4f // Min realiable speed
+#define VEL_FLOOR_INFLATE 8.0f // Varance multiplier at low speed
+
 #define POS_STD_DEGRADED_M 4.0f
+
+// Battery monitor
+#define BAT_SAMPLE_INTERVAL_MS 250
+#define BAT_TIME_CONST_S 3

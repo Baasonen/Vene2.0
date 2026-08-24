@@ -23,7 +23,6 @@ typedef struct
 typedef struct 
 {
     uint8_t mode;
-    uint8_t battery;
     uint8_t targetWaypoint;
     int16_t targetCourse;
     int8_t APThrottle;
@@ -31,7 +30,7 @@ typedef struct
     bool loraTimeout;
     int8_t loraRSSI;
     bool wifiTimeout;
-    uint32_t commTimeoutTriggerTime;
+    uint32_t loraTimeoutTriggerTime;
 
     wp home;
     bool homeSet;

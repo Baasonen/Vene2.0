@@ -1,8 +1,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <string.h>
 
 #include "tuning.h"
+#include "gpsConfig.h"
 
 #define GPSRXPIN 5
 #define GPSTXPIN 18

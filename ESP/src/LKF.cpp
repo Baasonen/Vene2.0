@@ -238,8 +238,17 @@ PosSol LKFUpdate(const GPSData &gps, const MagData &mag)
         north.update(measN, r);
         east.update(measE, r);
 
+        float gpsSpeedMpS = sqrtf(gps.velN * gps.velN + gps.velE * gps.velE);
+
         float velStd = gps.velAccM;
         if (velStd < MIN_VEL_STD_MPS) {velStd = MIN_VEL_STD_MPS;}
+
+        float velTrust = gpsSpeedMpS / VEL_FLOOR_SPEED_MPS;
+        if (velTrust > 1.0f) {velTrust = 1.0f;}
+
+        float inflate = 1.0f + (VEL_FLOOR_INFLATE - 1.0f) * (1.0f - velTrust);
+        velStd *= inflate;
+
         float rVel = velStd * velStd;
 
         north.updateVel(gps.velN, rVel);

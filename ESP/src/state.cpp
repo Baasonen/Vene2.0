@@ -50,7 +50,7 @@ static bool modeValid(uint8_t m)
 uint8_t validateMode(const SystemStatus& status, const SensorData& sensors)
 {
     if (status.ctrlArmed && hasError(ERR_LORA_TIMEOUT) && 
-        (millis() - status.commTimeoutTriggerTime > FAILSAFE_DELAY_MS))
+        (millis() - status.loraTimeoutTriggerTime > FAILSAFE_DELAY_MS))
     {
         return modeValid(MODE_RTH) ? MODE_RTH : MODE_STOP;
     }

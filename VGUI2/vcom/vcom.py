@@ -37,7 +37,9 @@ class Controller:
             "heading": 0.0,
             "mode": 0,
             "target_idx": 0,
-            "battery": 0.0,
+            "battery_c1": 0.0,
+            "battery_c2": 0.0,
+            "battery_c3": 0.0,
             "hAcc": 0.0,
             "signal": 0,
             "error": 0,
@@ -453,7 +455,7 @@ class Controller:
             self.on_mode_change(mode)
 
     def _handle_slow_tele(self, payload: bytes) -> None:
-        _, battery, hAcc_raw, signal_raw, lat_raw, lon_raw = struct.unpack(SLOW_FORMAT, payload)
+        _, hAcc_raw, signal_raw, lat_raw, lon_raw = struct.unpack(SLOW_FORMAT, payload)
 
         self._t.update_lora_t()
 
@@ -462,7 +464,6 @@ class Controller:
 
         with self._data_lock:
             self._telemetry_data.update({
-                "battery": battery,
                 "hAcc": (hAcc_raw / 10.0) if hAcc_raw != 255 else 0.0,
                 "signal": signal_raw - 128,
                 "lat" : lat,
@@ -471,6 +472,17 @@ class Controller:
 
     def _handle_be_tele(self, payload: bytes) -> None:
         _, c1, c2, c3, new_error = struct.unpack(BE_TELE_FORMAT, payload)
+
+        c1 += 2.5
+        c2 += 2.5
+        c3 += 2.5
+
+        with self._data_lock:
+            self._telemetry_data.update({
+                "battery_c1": c1,
+                "battery_c2": c2,
+                "battery_c3": c3,
+            })
 
         self._t.update_lora_t()
 

@@ -1,7 +1,5 @@
-#include <string.h>
-
 #include "gps.h"
-#include "gpsConfig.h"
+
 #include "errors.h"
 
 static HardwareSerial gpsSerial(2);

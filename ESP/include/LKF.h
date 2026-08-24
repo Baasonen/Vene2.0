@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
-#include "magnetometer.h"
 #include "gps.h"
+#include "magnetometer.h"
 #include "tuning.h"
 
 typedef struct 

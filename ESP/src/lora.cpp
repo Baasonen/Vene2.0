@@ -111,7 +111,7 @@ void resetLoRa()
         {
             if (!globalState.status.loraTimeout)
             {
-                globalState.status.commTimeoutTriggerTime = millis();
+                globalState.status.loraTimeoutTriggerTime = millis();
             }
             globalState.status.loraTimeout = true;
             xSemaphoreGive(stateMutex);
@@ -287,8 +287,6 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
                 kfStatus = (uint8_t)min(scaled, (uint32_t)100);
             }
             
-
-            slowPkt.batt = globalState.status.battery;
             slowPkt.gps = kfStatus;
             slowPkt.signalStrength = (uint8_t)(lastRSSI + 128);
             slowPkt.lat = (int32_t)(globalState.sensors.kf.lat * 1e7);
@@ -344,7 +342,7 @@ void commsTask(void* pvParameters)
         {
             if (!globalState.status.loraTimeout)
             {
-                globalState.status.commTimeoutTriggerTime = millis();
+                globalState.status.loraTimeoutTriggerTime = millis();
             }
 
             globalState.status.loraTimeout = true;
@@ -420,7 +418,7 @@ void commsTask(void* pvParameters)
             {
                 if (!globalState.status.loraTimeout)
                 {
-                    globalState.status.commTimeoutTriggerTime = millis();
+                    globalState.status.loraTimeoutTriggerTime = millis();
                     globalState.status.loraTimeout = true;
                 }
 

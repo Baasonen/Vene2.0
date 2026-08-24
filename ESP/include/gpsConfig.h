@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "gps.h"
+
 void sendUBX(Stream &port, uint8_t cls, uint8_t id, const uint8_t *payload, uint16_t len);
 void gpsRunOneTimeSetup(Stream &port);
 void ubxEnableSBAS(Stream &port);

@@ -153,8 +153,15 @@ class TelemetryFrame(BaseFrame):
             mag.configure(text = "3/3", fg = self.theme["green"])
 
         bat, _, _ = self.widgets["BAT"]
-        bat.config(text = f"{telemetry['battery']} V",
-                   fg=self.theme["green"] if telemetry["battery"] > 30 else self.theme["red"])
+
+        c1 = telemetry["battery_c1"]
+        c2 = telemetry["battery_c2"]
+        c3 = telemetry["battery_c3"]
+
+        bat_text = f"{c1} / {c2} / {c3} ({c1 + c3 + c3}) V"
+
+        bat.config(text = bat_text,
+                   fg=self.theme["green"] if telemetry["battery_c1"] > 30 else self.theme["red"])
 
         gps, _, _ = self.widgets["GPS"]
 
@@ -171,6 +178,7 @@ class TelemetryFrame(BaseFrame):
             gps_color = self.theme["orange"]
 
         gps.config(text = gps_text, fg = gps_color)
+
 
         self.widgets["SIG"][0].config(text=f"{telemetry['signal']} dBm")
 

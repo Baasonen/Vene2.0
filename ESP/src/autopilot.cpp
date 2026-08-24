@@ -1,8 +1,5 @@
 #include "autopilot.h"
 
-#include "navigation.h"
-#include "control.h"
-
 bool runAutopilot(SystemStatus& status, const SensorData& sensors, const Route& route)
 {
     if (status.targetWaypoint == 0) {status.targetWaypoint = 1;}

@@ -56,7 +56,6 @@ struct TelemetryFastPacket
 struct TelemetrySlowPacket
 {
     uint8_t packetID; // 0x03
-    uint8_t batt;
     uint8_t gps;
     uint8_t signalStrength;
     int32_t lat;

@@ -11,7 +11,7 @@ FAST_FORMAT = "<BHBB"
 FAST_SIZE = struct.calcsize(FAST_FORMAT)
  
 # Slow telemetry (downlink): battery, HDOP, RSSI, error bitmask
-SLOW_FORMAT = "<BBBBii"
+SLOW_FORMAT = "<BBBii"
 SLOW_SIZE = struct.calcsize(SLOW_FORMAT)
 
 # BE telemetry (downlink): uint8_t packetID, uint8_t c1, uint8_t c2, uint8_t c3, uint32_t errorCode
