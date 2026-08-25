@@ -48,6 +48,15 @@ void sensorTask(void* pv)
         data.kf = LKFUpdate(data.gps, data.mag);
 
         xQueueOverwrite(sensorQueue, &data);
+
+        Battery newBatt = getBattery();
+
+        if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            globalState.battery = newBatt;
+
+            xSemaphoreGive(stateMutex);
+        }
     }
 }
 
@@ -165,20 +174,23 @@ void diagTask(void* pv)
 
     for(;;)
     {
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        vTaskDelay(pdMS_TO_TICKS(2000));
 
         SensorData sensors = {};
         SystemStatus status = {};
+        Battery batt = {};
 
         xQueuePeek(sensorQueue, &sensors, 0);
 
         if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
         {
             status = globalState.status;
+            batt = globalState.battery;
+
             xSemaphoreGive(stateMutex);
         }
 
-        if (millis() - startMillis > 15000)
+        if (millis() - startMillis > 10000)
         {
             Serial.println("\n--- VENE 2.0 ---");
             Serial.printf("Mode:    %u\n", status.mode);
@@ -195,6 +207,7 @@ void diagTask(void* pv)
                           status.loraTimeout ? "YES" : "NO",
                           status.wifiTimeout ? "YES" : "NO");
             Serial.printf("LoRa RSSI: %i dBm\n\n", status.loraRSSI);
+            Serial.printf("Battery: %.2f, %.2f, %.2f\n", batt.c1F, batt.c2F, batt.c3F);
             Serial.printf("Errors: 0x%08X\n", (unsigned long)status.errorCode);
             //printActiveErrors();
             Serial.println("----------------");

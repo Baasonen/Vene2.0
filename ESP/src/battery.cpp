@@ -15,7 +15,7 @@ void batteryInit()
 
 uint8_t uClamp8(int a) {return (uint8_t)constrain(a, 0, 255);}
 
-Battery readBattery()
+Battery getBattery()
 {
     uint32_t now = millis();
 
@@ -24,9 +24,10 @@ Battery readBattery()
         float dt = batInitialized ? (now - batLastSampleMs) / 1000.0f : 0.0f;
         batLastSampleMs = now;
 
-        float c1Gain = 1.0f;
-        float c2Gain = 1.0f;
-        float c3Gain = 1.0f;
+        // TOO: Calculate gains from multiple charge levels
+        float c1Gain = 2.0390f; 
+        float c2Gain = 4.0732f;
+        float c3Gain = 6.0337f;
 
         float cell1 = analogReadMilliVolts(CELL1PIN) / 1000.0f;
         float cell2 = analogReadMilliVolts(CELL2PIN) / 1000.0f;

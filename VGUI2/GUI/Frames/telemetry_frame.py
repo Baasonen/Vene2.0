@@ -158,7 +158,7 @@ class TelemetryFrame(BaseFrame):
         c2 = telemetry["battery_c2"]
         c3 = telemetry["battery_c3"]
 
-        bat_text = f"{c1} / {c2} / {c3} ({c1 + c3 + c3}) V"
+        bat_text = f"{c1} / {c2} / {c3} ({(c1 + c3 + c3):.2f}) V"
 
         bat.config(text = bat_text,
                    fg=self.theme["green"] if telemetry["battery_c1"] > 30 else self.theme["red"])

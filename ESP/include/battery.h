@@ -4,9 +4,9 @@
 
 #include "tuning.h"
 
-#define CELL1PIN 1
-#define CELL2PIN 2
-#define CELL3PIN 3
+#define CELL1PIN 33
+#define CELL2PIN 32
+#define CELL3PIN 35
 
 typedef struct
 {
@@ -20,3 +20,5 @@ typedef struct
 
     float lowest;
 } Battery;
+
+Battery getBattery();

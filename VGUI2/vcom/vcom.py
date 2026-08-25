@@ -473,9 +473,9 @@ class Controller:
     def _handle_be_tele(self, payload: bytes) -> None:
         _, c1, c2, c3, new_error = struct.unpack(BE_TELE_FORMAT, payload)
 
-        c1 += 2.5
-        c2 += 2.5
-        c3 += 2.5
+        c1 = (c1 / 100) + 2.5
+        c2 = (c2 / 100) + 2.5
+        c3 = (c3 / 100) + 2.5
 
         with self._data_lock:
             self._telemetry_data.update({

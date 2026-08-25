@@ -308,7 +308,9 @@ void txTask(uint32_t &lastFastTele, uint32_t &lastSlowTele, uint32_t &lastBETele
     if (xSemaphoreTake(stateMutex, pdMS_TO_TICKS(10)) == pdTRUE)
     {
         bePkt.errorCode = globalState.status.errorCode;
-        bePkt.c1 = (uint8_t)100;
+        bePkt.c1 = globalState.battery.c1;
+        bePkt.c2 = globalState.battery.c2;
+        bePkt.c3 = globalState.battery.c3;
 
         xSemaphoreGive(stateMutex);
 

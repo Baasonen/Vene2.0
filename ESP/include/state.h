@@ -3,6 +3,7 @@
 #include "gps.h"
 #include "magnetometer.h"
 #include "LKF.h"
+#include "battery.h"
 
 #define MAG_MIN_ACC 1
 #define WP_AMMNT_LIM 200
@@ -62,6 +63,7 @@ typedef struct
     SensorData sensors;
     Route route;
     SystemStatus status;
+    Battery battery;
     ManualControls manual;
 } State;
 
