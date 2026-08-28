@@ -80,6 +80,7 @@ class WaypointFrame(BaseFrame):
         self.length_label.pack(side = "bottom", fill = "x")
 
         self.apply_theme(self.theme)
+        self._update_route_length()
 
     def add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoints.append(coords)

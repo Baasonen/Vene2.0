@@ -41,6 +41,29 @@ class TelemetryFrame(BaseFrame):
                             bg=self.theme["panel_bg"], fg=self.theme["fg_dim"])
             desc.pack(anchor="w")
 
+            if code == "BAT":
+                cells_row = tk.Frame(container, bg = self.theme["panel_bg"])
+                cells_row.pack(anchor = "w", padx = 2)
+
+                cell_labels = []
+                for i in range(3):
+                    if i > 0:
+                        sep = tk.Label(cells_row, text = "/", font = ("Consolas", 12, "bold"),
+                                       bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+                        sep.pack(side = "left")
+
+                    cell_lbl = tk.Label(cells_row, text = "-V", font = ("Consolas", 12, "bold"),
+                                        bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+                    cell_lbl.pack(side = "left")
+                    cell_labels.append(cell_lbl)
+
+                total_lbl = tk.Label(cells_row, text = " (-V)", font = ("Consolas", 12, "bold"),
+                                     bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
+                total_lbl.pack(side = "left")
+
+                self.widgets[code] = (tuple(cell_labels) + (total_lbl,), container, desc)
+                continue         
+
             value = tk.Label(container, text=default, font=("Consolas", 12, "bold"),
                               bg=self.theme["panel_bg"], fg=self.theme["fg"])
             value.pack(anchor="w", padx=2)
@@ -131,7 +154,7 @@ class TelemetryFrame(BaseFrame):
             else:
                 pos.config(text = "NO GPS FIX", fg = self.theme["red"])
 
-        self.widgets["HDG"][0].config(text=f"{telemetry['heading']:.1f}°")
+        self.widgets["HDG"][0].config(text=f"{telemetry['heading']:.1f}°", fg = self.theme["fg"])
         self.widgets["NAV"][0].config(
             text=f"WP {telemetry['target_idx']} [{MODE_NAMES.get(telemetry['mode'], 'UNKNOWN')}]")
         
@@ -145,6 +168,7 @@ class TelemetryFrame(BaseFrame):
 
         if level == 0:
             mag.config(text = "0/3", fg = self.theme["red"])
+            self.widgets["HDG"][0].config(text = "N/A", fg = self.theme["red"])
         elif level == 1:
             mag.configure(text = "1/3", fg = self.theme["orange"])
         elif level == 2:
@@ -152,16 +176,18 @@ class TelemetryFrame(BaseFrame):
         else:
             mag.configure(text = "3/3", fg = self.theme["green"])
 
-        bat, _, _ = self.widgets["BAT"]
+        (c1_lbl, c2_lbl, c3_lbl, total_lbl), _, _ = self.widgets["BAT"]
+        cells = [telemetry["battery_c1"], telemetry["battery_c2"], telemetry["battery_c3"]]
 
-        c1 = telemetry["battery_c1"]
-        c2 = telemetry["battery_c2"]
-        c3 = telemetry["battery_c3"]
+        for value, lbl in zip(cells, (c1_lbl, c2_lbl, c3_lbl)):
+            if value <= 2.5:
+                lbl.config(text = "N/A", fg = self.theme["red"])
+            elif value > 3.5:
+                lbl.config(text = f"{value:.2f}V", fg = self.theme["green"])
+            else:
+                lbl.config(text = f"{value:.2f}V", fg = self.theme["orange"])
 
-        bat_text = f"{c1} / {c2} / {c3} ({(c1 + c3 + c3):.2f}) V"
-
-        bat.config(text = bat_text,
-                   fg=self.theme["green"] if telemetry["battery_c1"] > 30 else self.theme["red"])
+        total_lbl.config(text = f" ({sum(cells):.2f} V)")
 
         gps, _, _ = self.widgets["GPS"]
 
@@ -188,10 +214,15 @@ class TelemetryFrame(BaseFrame):
                           highlightbackground=theme["border"], highlightthickness=1,
                           bd=1, relief="solid")
 
-        for value, container, desc in self.widgets.values():
+        for code, (value, container, desc) in self.widgets.items():
             container.config(bg=theme["panel_bg"])
             desc.config(bg=theme["panel_bg"], fg=theme["fg_dim"])
-            value.config(bg=theme["panel_bg"], fg=theme["fg"])
+
+            if code == "BAT":
+                for lbl in value:
+                    lbl.config(bg=theme["panel_bg"])
+            else:
+                value.config(bg=theme["panel_bg"], fg=theme["fg"])
 
         if self._last_telemetry is not None:
             self._refresh(self._last_telemetry, self._last_connection)
