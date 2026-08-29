@@ -25,9 +25,9 @@ Battery getBattery()
         batLastSampleMs = now;
 
         // TOO: Calculate gains from multiple charge levels
-        float c1Gain = 2.0390f; 
-        float c2Gain = 4.0732f;
-        float c3Gain = 6.0337f;
+        float c1Gain = 2.0197f;
+        float c2Gain = 4.0156f;
+        float c3Gain = 5.9553f;
 
         float cell1 = analogReadMilliVolts(CELL1PIN) / 1000.0f;
         float cell2 = analogReadMilliVolts(CELL2PIN) / 1000.0f;

@@ -11,6 +11,7 @@
 
 #include "errors_generated.h"
 #include "state.h"
+#include "tuning.h"
 
 #define WI_SENSOR_VCC 23
 #define WI_SENSOR_S 34

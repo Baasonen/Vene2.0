@@ -60,3 +60,5 @@
 // Battery monitor
 #define BAT_SAMPLE_INTERVAL_MS 250
 #define BAT_TIME_CONST_S 3
+
+#define BATT_LOW_TRESHOLD 3.6f
