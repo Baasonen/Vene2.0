@@ -1,0 +1,4 @@
+# VGUI2 Settings
+theme=dark
+port=COM4
+overlay=Both

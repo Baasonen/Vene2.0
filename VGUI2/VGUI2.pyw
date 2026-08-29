@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 VERSION_MAJOR = 5
-VERSION_MINOR = 4
+VERSION_MINOR = 6
 
 VERSION = f"2.{VERSION_MAJOR}.{VERSION_MINOR}"
 
@@ -16,12 +16,13 @@ from typing import Dict, Set, Tuple, Optional
 # Import GUI only after showing splash screen
 
 from GUI.themes import THEMES
+from GUI.settings import load_settings
 
 def _load_modules() -> None:
     global ConnectionStatusFrame, ModeSelectFrame, TelemetryFrame
     global ErrorFrame, WaypointFrame, WaypointListFrame, MapFrame
     global ManualControlFrame, PatternPlannerFrame, SwapContainer
-    global PYGAME_AVAIL, Controller, TelemetryRecorder
+    global PYGAME_AVAIL, Controller, TelemetryRecorder, SettingsFrame
 
     from GUI.Frames.connection_status_frame import ConnectionStatusFrame
     from GUI.Frames.mode_select_frame import ModeSelectFrame
@@ -33,6 +34,7 @@ def _load_modules() -> None:
     from GUI.Frames.manual_control_frame import ManualControlFrame
     from GUI.Pattern.frame import PatternPlannerFrame
     from GUI.swap_container import SwapContainer
+    from GUI.Frames.settings_frame import SettingsFrame
 
     try:
         import pygame
@@ -47,7 +49,12 @@ class VGUI:
     def __init__(self, root: tk.Tk, controller: Controller):
         self.root = root
         self.ctrl = controller
-        self.current_theme_name = "dark"
+
+        self.settings = load_settings()
+        self.current_theme_name = self.settings.get("theme", "dark")
+        if self.current_theme_name not in THEMES:
+            self.current_theme_name = "dark"
+
         self.theme = THEMES[self.current_theme_name]
 
         self.root.title(f"VGUI {VERSION}")
@@ -79,6 +86,9 @@ class VGUI:
         self.lbl_clock = tk.Label(self.header, text = "", font = ("Segoe UI", 12),
                                   bg = self.theme["panel_bg"], fg = self.theme["fg"])
         self.lbl_clock.pack(side = "left", padx = (0, 15))
+
+        self.btn_settings = ttk.Button(self.header, text = "Settings", command = self._on_toggle_settings)
+        self.btn_settings.pack(side = "right", padx = (0, 5), pady = 5)
         
         self.theme_var = tk.StringVar(value = self.current_theme_name)
         self.theme_combo = ttk.Combobox(self.header, textvariable = self.theme_var,
@@ -88,7 +98,7 @@ class VGUI:
         self.theme_combo.bind("<<ComboboxSelected>>", self._on_theme_select)
 
         self.btn_record = ttk.Button(self.header, text = "Record", command = self._on_toggle_recording)
-        self.btn_record.pack(side = "right", padx = (0, 15))
+        self.btn_record.pack(side = "right", padx = (0, 5))
 
         self.main = tk.Frame(self.root, bg=self.theme["bg"])
         self.main.pack(fill="both", expand=True, padx=10, pady=5)
@@ -131,7 +141,7 @@ class VGUI:
             self.map_frame
         ]
 
-        self.map_frame.set_tiles(self.current_theme_name == "dark")
+        self.map_frame.set_tiles(self.theme["dark_map"])
 
     def _on_add_waypoint(self, coords: Tuple[float, float]) -> None:
         self.waypoint_frame.add_waypoint(coords)
@@ -171,6 +181,32 @@ class VGUI:
                 on_apply_route = self._on_apply_pattern_route))
 
         self.frames.append(pattern_planner_frame)
+
+    def _on_toggle_settings(self) -> None:
+        if self.error_swap.is_overlaid:
+            was_settings = isinstance(self.error_swap.active_overlay, SettingsFrame)
+            self._close_overlay()
+            if was_settings:
+                return
+
+        self._open_settings()
+
+    def _open_settings(self) -> None:
+        settings_frame = self.error_swap.show_overlay(
+            lambda parent: SettingsFrame(
+                parent, self.theme, self.ctrl,
+                on_close = self._close_overlay,
+                on_theme_change = self._on_settings_theme_change,
+                on_overlay_change = self._on_settings_overlay_change))
+
+        self.frames.append(settings_frame)
+
+    def _on_settings_theme_change(self, theme_name: str) -> None:
+        self.theme_var.set(theme_name)
+        self._on_theme_select()
+
+    def _on_settings_overlay_change(self, overlay_mode: str) -> None:
+        self.map_frame.set_overlay_mode(overlay_mode)
 
     def _open_waypoint_list(self) -> None:
         list_frame = self.error_swap.show_overlay(
@@ -408,7 +444,7 @@ def main() -> None:
     set_status("Loading Modules...")
     _load_modules()
 
-    port = sys.argv[1] if len(sys.argv) > 1 else "COM4"
+    port = sys.argv[1] if len(sys.argv) > 1 else load_settings().get("port", "COM4")
 
     set_status("VCOM Init...")
     controller = Controller(port = port)

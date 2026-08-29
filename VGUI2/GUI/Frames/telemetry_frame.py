@@ -46,11 +46,14 @@ class TelemetryFrame(BaseFrame):
                 cells_row.pack(anchor = "w", padx = 2)
 
                 cell_labels = []
+                self._bat_separators = []
+
                 for i in range(3):
                     if i > 0:
                         sep = tk.Label(cells_row, text = "/", font = ("Consolas", 12, "bold"),
                                        bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
                         sep.pack(side = "left")
+                        self._bat_separators.append(sep)
 
                     cell_lbl = tk.Label(cells_row, text = "-V", font = ("Consolas", 12, "bold"),
                                         bg = self.theme["panel_bg"], fg = self.theme["fg_dim"])
@@ -148,9 +151,9 @@ class TelemetryFrame(BaseFrame):
             pos_desc.config(text = "GPS")
 
             if telemetry["lat"] != 0.0 and telemetry["lon"] != 0.0 and telemetry["hAcc"] < 4.0:
-                pos.config(text=f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["fg"])
+                pos.config(text = f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["fg"])
             elif telemetry["lat"] != 0.0 and telemetry["lon"] != 0.0:
-                pos.config(text=f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["red"])
+                pos.config(text = f"{telemetry['lat']:.6f} N, {telemetry['lon']:.6f} E", fg = self.theme["red"])
             else:
                 pos.config(text = "NO GPS FIX", fg = self.theme["red"])
 
@@ -219,8 +222,12 @@ class TelemetryFrame(BaseFrame):
             desc.config(bg=theme["panel_bg"], fg=theme["fg_dim"])
 
             if code == "BAT":
-                for lbl in value:
+                *cell_lbls, total_lbl = value
+                for lbl in cell_lbls:
                     lbl.config(bg=theme["panel_bg"])
+                total_lbl.config(bg=theme["panel_bg"], fg=theme["fg_dim"])
+                for sep in self._bat_separators:
+                    sep.config(bg=theme["panel_bg"], fg=theme["fg_dim"])
             else:
                 value.config(bg=theme["panel_bg"], fg=theme["fg"])
 

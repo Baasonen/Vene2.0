@@ -9,6 +9,7 @@ import os
 import math
 
 from GUI.base_frame import BaseFrame
+from GUI.settings import load_settings
 from GUI.speedo_overlay import SpeedoOverlay, OVERLAY_TOP_Y
 from GUI.heading_overlay import HeadingOverlay, OVERLAY_GAP
 from VCOM.protocol import MODE_COURSE
@@ -36,7 +37,6 @@ FALLBACK_POS = (60.1849, 24.8250)
 ROUTES_DIR = os.path.join(os.getcwd(), "Routes")
 
 BASEMAP_OPTIONS = ["Default", "Satellite", "OpenStreetMap"]
-OVERLAY_OPTIONS = ["None", "Speed", "Heading", "Both"]
 
 BASE_TILE_SERVERS = {
     "Default": {
@@ -127,16 +127,7 @@ class MapFrame(BaseFrame):
         )
         self.chk_seamark.pack(side = "right", padx = 5)
 
-        self.overlay_var = tk.StringVar(value = "Both")
-        self.cmb_overlay = ttk.Combobox(
-            self.toolbar, textvariable = self.overlay_var, values = OVERLAY_OPTIONS,
-            state = "readonly", width = 8,
-        )
-        self.cmb_overlay.bind("<<ComboboxSelected>>", lambda _event: self._on_overlay_mode_change())
-        self.cmb_overlay.pack(side = "right", padx = 6)
-
-        self.nav_overlay_label = tk.Label(self.toolbar, text = "Nav Overlay: ", font = ("Segoe UI", 9), bg = self.theme["panel_bg"], fg = self.theme["fg"])
-        self.nav_overlay_label.pack(side = "right", padx = (6, 2))
+        self.overlay_var = tk.StringVar(value = load_settings().get("overlay", "Both"))
 
         self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
         self.widget.pack(fill = "both", expand = True)
@@ -195,6 +186,10 @@ class MapFrame(BaseFrame):
             self.heading.set_visible(True, y = y)
         else:
             self.heading.set_visible(False)
+
+    def set_overlay_mode(self, mode: str) -> None:
+        self.overlay_var.set(mode)
+        self._on_overlay_mode_change()
 
     # Icon 
     @staticmethod
@@ -401,8 +396,6 @@ class MapFrame(BaseFrame):
         super().apply_theme(theme)
 
         self.frame.config(bg = theme["panel_bg"], fg = theme["fg"])
-
-        self.nav_overlay_label.config(bg = theme["panel_bg"], fg = theme["fg"])
 
         self.toolbar.config(bg = theme["panel_bg"])
         self.chk_follow.config(bg = theme["panel_bg"], fg = theme["fg"],
