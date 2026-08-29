@@ -4,9 +4,7 @@
 #include "magnetometer.h"
 #include "LKF.h"
 #include "battery.h"
-
-#define MAG_MIN_ACC 1
-#define WP_AMMNT_LIM 200
+#include "tuning.h"
 
 struct wp
 {
@@ -15,7 +13,7 @@ struct wp
 
 typedef struct 
 {   
-    wp waypoints[WP_AMMNT_LIM + 1];
+    wp waypoints[WP_AMMOUNT_LIM + 1];
     uint8_t id;
     uint8_t length;
     bool newRouteAvailable;

@@ -14,6 +14,8 @@
 #define ESC_NEUTRAL 1500 
 
 // Autopilot
+#define WP_AMMOUNT_LIM 200
+
 #define WP_TRESHOLD_M 2.5 // Dist. from where a wp is treated as reached
 #define HOME_TRESHOLD_M 5
 #define LOOKAHEAD_DISTANCE 6.0f // Lookahead dist. for route following
@@ -33,10 +35,16 @@
 #define CAD_BACKOFF_MAX_MS 10
 
 // GPS
+#define GPS_TINYGPS_FALLBACK false
+#define GPS_SKIP_LKF false
+
 #define MIN_SAT_COUNT 4
 
 #define GPS_HACC_GATE 10
 #define GPS_HACC_ACCURATE 4
+
+// MAG
+#define MAG_MIN_ACC 1
 
 // LKF
 #define Q_POS_RATE 0.02f

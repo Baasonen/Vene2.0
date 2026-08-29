@@ -2,6 +2,11 @@
 
 #include "errors.h"
 
+#if GPS_TINYGPS_FALLBACK
+#include <TinyGPS++.h>
+static TinyGPSPlus tinyGPS;
+#endif
+
 static HardwareSerial gpsSerial(2);
 
 // UBX NAV parser
@@ -242,6 +247,48 @@ static void ubxFeed(uint8_t b)
     }
 }
 
+#if GPS_TINYGPS_FALLBACK
+static void populateFromTinyGPS()
+{
+    if (tinyGPS.location.isValid())
+    {
+        data.lat = tinyGPS.location.lat();
+        data.lon = tinyGPS.location.lng();
+        lastPollMs = millis();
+    }
+
+    data.satellites = tinyGPS.satellites.isValid() ? tinyGPS.satellites.value() : 0;
+
+    float hdop = tinyGPS.hdop.isValid() ? tinyGPS.hdop.hdop() : 5.0f;
+    data.hAccM = hdop * 5.0f;
+
+    if (tinyGPS.speed.isValid() && tinyGPS.course.isValid())
+    {
+        float speedMs = tinyGPS.speed.kmph() / 3.6f;
+        float courseRad = tinyGPS.course.deg() * DEG_TO_RAD;
+
+        data.speedKMH = tinyGPS.speed.kmph();
+        data.headingDeg = tinyGPS.course.deg();
+        data.velN = speedMs * cos(courseRad);
+        data.velE = speedMs * sin(courseRad);
+        data.velAccM = 1.0f;
+    }
+
+    data.fixType = (tinyGPS.location.isValid() && data.satellites >= MIN_SAT_COUNT) ? 3 : 0;
+    solFixOk = (data.fixType == 3);
+    if (solFixOk) {lastSolMs = millis();}
+
+    currentITOW = millis();
+
+    if (tinyGPS.date.isValid() && tinyGPS.time.isValid())
+    {
+        data.unixTime = utcToUnix(tinyGPS.date.year(), tinyGPS.date.month(), tinyGPS.date.day(),
+                                   tinyGPS.time.hour(), tinyGPS.time.minute(), tinyGPS.time.second());
+        data.utcTimeValid = true;
+    }
+}
+#endif
+
 #if GPS_DEBUG
 static void printGPSDebug()
 {
@@ -265,6 +312,7 @@ int GPSInit()
     gpsSerial.begin(9600, SERIAL_8N1, GPSRXPIN, GPSTXPIN); // always start at factory default
     delay(1000);
 
+    #if !GPS_TINYGPS_FALLBACK
     ubxDisableNMEA(gpsSerial);
     ubxEnableSBAS(gpsSerial);
     ubxSetNavRate(gpsSerial, 200); // 5 Hz
@@ -276,6 +324,7 @@ int GPSInit()
     delay(50);
     gpsSerial.updateBaudRate(38400);
     delay(100);
+    #endif
 
     uint32_t start = millis();
     while (millis() - start < 3000)
@@ -289,10 +338,16 @@ int GPSInit()
 
 GPSData getGPS()
 {
+    #if GPS_TINYGPS_FALLBACK
+    while (gpsSerial.available() > 0) {tinyGPS.encode(gpsSerial.read());}
+    populateFromTinyGPS();
+    #else
     while (gpsSerial.available() > 0) {ubxFeed(gpsSerial.read());}
 
     #if GPS_DEBUG
     printGPSDebug();
+    #endif
+    
     #endif
 
     data.freshFix = solFixOk && (currentITOW != lastConsumedITOW);

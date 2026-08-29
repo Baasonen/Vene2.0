@@ -2,6 +2,7 @@
 
 #include "lora.h"
 #include "errors.h"
+#include "tuning.h"
 
 void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint32_t &lastRoutePacketTime, 
                        Route &tempRoute, bool* wpReceived, uint8_t &receivedCount)
@@ -17,10 +18,10 @@ void handleRoutePacket(uint8_t* rxBuffer, uint32_t &lastPacketReceivedTime, uint
         tempRoute.id = rp->id;
         tempRoute.length = rp->ammnt;
         receivedCount = 0;
-        memset(wpReceived, 0, WP_AMMNT_LIM * sizeof(bool));
+        memset(wpReceived, 0, WP_AMMOUNT_LIM * sizeof(bool));
     }
 
-    if ((rp->id == tempRoute.id) && (rp->order < WP_AMMNT_LIM))
+    if ((rp->id == tempRoute.id) && (rp->order < WP_AMMOUNT_LIM))
     {
         DataPacket ack = {PKT_DATA, rp->id, rp->order};
         beginTransmit((uint8_t*)&ack, sizeof(ack));

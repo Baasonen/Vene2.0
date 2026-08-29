@@ -368,7 +368,7 @@ void commsTask(void* pvParameters)
     uint32_t lastPacketReceivedTime = millis();
 
     static Route tempRoute = {};
-    static bool wpReceived[WP_AMMNT_LIM] = {false};
+    static bool wpReceived[WP_AMMOUNT_LIM] = {false};
     static uint8_t receivedCount = 0;
 
     dutyWindowStart = millis();

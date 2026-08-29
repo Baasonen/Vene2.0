@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <math.h>
 
+#include "tuning.h"
+
 #define EARTHRADIUS_M 6371000.0
 
 // 1D constan velocity KF
@@ -168,6 +170,19 @@ PosSol LKFUpdate(const GPSData &gps, const MagData &mag)
 {
     PosSol out = {0};
 
+    #if GPS_SKIP_LKF
+
+    out.valid = gps.valid;
+    out.lat = gps.lat;
+    out.lon = gps.lon;
+
+    out.posStdM = gps.hAccM;
+    out.posNISAvg = 0.0f;
+    out.velNIS = 0.0f;
+
+    return out;
+    #else
+
     uint32_t now = millis();
 
     float dt = (now - lastUpdateMs) / 1000.0f;
@@ -279,4 +294,6 @@ PosSol LKFUpdate(const GPSData &gps, const MagData &mag)
     out.valid = true;
 
     return out;
+
+    #endif
 }
