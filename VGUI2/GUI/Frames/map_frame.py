@@ -9,10 +9,11 @@ import os
 import math
 
 from GUI.base_frame import BaseFrame
-from GUI.settings import load_settings
+from GUI.Utils.settings import load_settings
 from GUI.speedo_overlay import SpeedoOverlay, OVERLAY_TOP_Y
 from GUI.heading_overlay import HeadingOverlay, OVERLAY_GAP
 from VCOM.protocol import MODE_COURSE
+from GUI.Utils.map_downloader import MAP_DIR
 
 # Fix for slow OpenSeaMap
 class _TimeoutRequests:
@@ -77,6 +78,8 @@ class MapFrame(BaseFrame):
         self._last_home = (0.0, 0.0)
         self._is_dark = False
 
+        self._download_area_polygon = None
+
         try:
             home_icon_path = os.path.join(base_path, "Icons", "green_dot.png")
             self._home_icon = tk.PhotoImage(file = home_icon_path)
@@ -129,7 +132,7 @@ class MapFrame(BaseFrame):
 
         self.overlay_var = tk.StringVar(value = load_settings().get("overlay", "Both"))
 
-        self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4)
+        self.widget = tkintermapview.TkinterMapView(self.frame, corner_radius = 4, database_path = MAP_DIR)
         self.widget.pack(fill = "both", expand = True)
         self.widget.set_zoom(16)
 
@@ -294,6 +297,22 @@ class MapFrame(BaseFrame):
     # Arms a single shot map click, route the next map double clik to callback, pass None to cancel pending pick
     def request_point(self, callback: Optional[Callable[[Tuple[float, float]], None]]) -> None:
         self._point_pick_callback = callback
+
+    def show_download_area(self, top_l: Tuple[float, float], bottom_r: Tuple[float, float]) -> None:
+        self.clear_download_area()
+
+        n, w = top_l
+        s, e = bottom_r
+
+        self._download_area_polygon = self.widget.set_polygon(
+            [(n, w), (n, e), (s, e), (s, w)],
+            outline_color = self.theme["accent"], fill_color = None,
+            border_width = 4, name = "Download Area")
+
+    def clear_download_area(self) -> None:
+        if self._download_area_polygon is not None:
+            self._download_area_polygon.delete()
+            self._download_area_polygon = None
 
     def _on_map_double_click(self, event) -> None:
         lat, lon = self.widget.convert_canvas_coords_to_decimal_coords(event.x, event.y)

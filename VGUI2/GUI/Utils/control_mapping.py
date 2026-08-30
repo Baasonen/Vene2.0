@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-from GUI.gamepad import RawGamepadState
+from GUI.Utils.gamepad import RawGamepadState
 
 @dataclass
 class ControllerProfile:

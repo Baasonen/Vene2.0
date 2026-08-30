@@ -6,7 +6,7 @@ from typing import Set
 import re
 
 from GUI.base_frame import BaseFrame
-from GUI.print_redirect import PrintRedirector
+from GUI.Utils.print_redirect import PrintRedirector
 
 IGNORED_LOG_NAMES = {"HDG_A1", "HDG_A2", "HDG_A3"}
 

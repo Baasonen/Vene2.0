@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-VERSION_MAJOR = 5
-VERSION_MINOR = 6
+VERSION_MAJOR = 6
+VERSION_MINOR = 1
 
 VERSION = f"2.{VERSION_MAJOR}.{VERSION_MINOR}"
 
@@ -15,8 +15,8 @@ from typing import Dict, Set, Tuple, Optional
 
 # Import GUI only after showing splash screen
 
-from GUI.themes import THEMES
-from GUI.settings import load_settings
+from Data.themes import THEMES
+from GUI.Utils.settings import load_settings
 
 def _load_modules() -> None:
     global ConnectionStatusFrame, ModeSelectFrame, TelemetryFrame
@@ -194,7 +194,7 @@ class VGUI:
     def _open_settings(self) -> None:
         settings_frame = self.error_swap.show_overlay(
             lambda parent: SettingsFrame(
-                parent, self.theme, self.ctrl,
+                parent, self.theme, self.ctrl, self.map_frame,
                 on_close = self._close_overlay,
                 on_theme_change = self._on_settings_theme_change,
                 on_overlay_change = self._on_settings_overlay_change))

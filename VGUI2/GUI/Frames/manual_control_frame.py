@@ -5,8 +5,8 @@ from typing import Dict, Optional, Tuple
 from GUI.base_frame import BaseFrame
 from VCOM.protocol import MODE_STOP, MODE_MANUAL, MODE_COURSE, MODE_AUTO, MODE_RTH
 
-from GUI.gamepad import GamepadInput, PYGAME_AVAIL
-from GUI.control_mapping import ControllerMapper, make_xbox_profile
+from GUI.Utils.gamepad import GamepadInput, PYGAME_AVAIL
+from GUI.Utils.control_mapping import ControllerMapper, make_xbox_profile
 
 POLL_MS = 50
 
